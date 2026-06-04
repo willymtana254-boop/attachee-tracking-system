@@ -373,7 +373,7 @@ textarea{resize:vertical;min-height:78px}
 
 <script>
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
-const API = '';   // same origin — server serves this file
+const API = window.location.origin;
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let currentUser = null;
@@ -415,7 +415,7 @@ async function doLogin() {
   const btn = document.getElementById('loginBtn');
   btn.disabled = true; btn.textContent = 'Signing in…';
   try {
-    const res = await fetch(API + '/api/login', {
+    const res = await fetch(window.location.origin + '/api/login', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({username: u, password: p})
@@ -442,7 +442,7 @@ async function tryAutoLogin() {
   if (!saved) return;
   token = saved;
   try {
-    const res = await fetch(API + '/api/me', { headers: authHeaders() });
+    const res = await fetch(window.location.origin + '/api/me', { headers: authHeaders() });
     if (!res.ok) throw new Error();
     currentUser = await res.json();
     startApp();
