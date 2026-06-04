@@ -3,7 +3,7 @@ Kilifi County ICT Attachee Tracking System — Backend API
 Run: python server.py
 """
 
-import sqlite3, hashlib, os, json
+import sqlite3, hashlib, os, json, secrets, time
 from datetime import timedelta
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
@@ -12,10 +12,37 @@ from flask_jwt_extended import (
 )
 
 app = Flask(__name__, static_folder='.')
-app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET', 'kilifi-ict-secret-2026-change-in-prod')
+
+# ── Security: generate a random secret on first run and persist it ────────────
+SECRET_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.jwt_secret')
+if os.environ.get('JWT_SECRET'):
+    _jwt_secret = os.environ['JWT_SECRET']
+elif os.path.exists(SECRET_FILE):
+    with open(SECRET_FILE) as _f:
+        _jwt_secret = _f.read().strip()
+else:
+    _jwt_secret = secrets.token_hex(32)
+    with open(SECRET_FILE, 'w') as _f:
+        _f.write(_jwt_secret)
+
+app.config['JWT_SECRET_KEY'] = _jwt_secret
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=12)
 CORS(app)
 jwt = JWTManager(app)
+
+# ── Login rate limiter (max 10 attempts per IP per minute) ────────────────────
+_login_attempts = {}   # ip -> [timestamp, ...]
+MAX_ATTEMPTS = 10
+WINDOW_SECS  = 60
+
+def _check_rate_limit(ip):
+    now = time.time()
+    attempts = [t for t in _login_attempts.get(ip, []) if now - t < WINDOW_SECS]
+    if len(attempts) >= MAX_ATTEMPTS:
+        return False
+    attempts.append(now)
+    _login_attempts[ip] = attempts
+    return True
 
 DB_PATH = 'kilifi.db'
 
@@ -28,6 +55,11 @@ def get_db():
     return conn
 
 def hash_pass(p):
+    """SHA-256 with salt. All SEED_USERS use this."""
+    return hashlib.sha256(f'kilifi2026{p}'.encode()).hexdigest()
+
+def hash_pass_legacy(p):
+    """Plain SHA-256 — used to migrate old passwords on login."""
     return hashlib.sha256(p.encode()).hexdigest()
 
 def row_to_dict(row):
@@ -251,20 +283,35 @@ def init_db():
 
 @app.route('/api/login', methods=['POST'])
 def login():
-    data = request.get_json()
+    ip = request.remote_addr
+    if not _check_rate_limit(ip):
+        return jsonify(error='Too many login attempts. Please wait 1 minute.'), 429
+    data = request.get_json() or {}
     username = (data.get('username') or '').strip()
     password = data.get('password') or ''
+    if not username or not password:
+        return jsonify(error='Username and password are required'), 400
     with get_db() as conn:
         user = row_to_dict(conn.execute(
             "SELECT * FROM users WHERE username=?", (username,)
         ).fetchone())
-    if not user or user['password_hash'] != hash_pass(password):
-        return jsonify(error='Invalid username or password'), 401
-    token = create_access_token(identity=str(user['id']))
-    return jsonify(token=token, user={
-        'id': user['id'], 'username': user['username'],
-        'fullName': user['full_name'], 'email': user['email'], 'role': user['role']
-    })
+        if user:
+            # Accept new salted hash OR legacy plain hash (auto-upgrade on success)
+            salted   = hash_pass(password)
+            legacy   = hash_pass_legacy(password)
+            if user['password_hash'] in (salted, legacy):
+                if user['password_hash'] == legacy:
+                    # Silently upgrade to salted hash
+                    conn.execute("UPDATE users SET password_hash=? WHERE id=?",
+                                 (salted, user['id']))
+                    conn.commit()
+                token = create_access_token(identity=str(user['id']))
+                return jsonify(token=token, user={
+                    'id': user['id'], 'username': user['username'],
+                    'fullName': user['full_name'], 'email': user['email'],
+                    'role': user['role']
+                })
+    return jsonify(error='Invalid username or password'), 401
 
 @app.route('/api/me', methods=['GET'])
 @jwt_required()
@@ -277,6 +324,65 @@ def me():
                    email=user['email'], role=user['role'])
 
 # ─── DEPARTMENTS ───────────────────────────────────────────────────────────────
+
+
+@app.route('/api/change-password', methods=['POST'])
+@jwt_required()
+def change_password():
+    uid = int(get_jwt_identity())
+    d = request.get_json() or {}
+    current_pw = d.get('currentPassword') or ''
+    new_pw     = d.get('newPassword') or ''
+    if not current_pw or not new_pw:
+        return jsonify(error='Current and new password are required'), 400
+    if len(new_pw) < 6:
+        return jsonify(error='New password must be at least 6 characters'), 400
+    with get_db() as conn:
+        user = row_to_dict(conn.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone())
+        if not user:
+            return jsonify(error='User not found'), 404
+        if user['password_hash'] not in (hash_pass(current_pw), hash_pass_legacy(current_pw)):
+            return jsonify(error='Current password is incorrect'), 401
+        conn.execute("UPDATE users SET password_hash=? WHERE id=?",
+                     (hash_pass(new_pw), uid))
+        conn.commit()
+    return jsonify(ok=True, message='Password changed successfully')
+
+@app.route('/api/me/profile', methods=['PUT'])
+@jwt_required()
+def update_profile():
+    uid = int(get_jwt_identity())
+    d = request.get_json() or {}
+    username   = (d.get('username') or '').strip()
+    current_pw = d.get('currentPassword') or ''
+    new_pw     = d.get('newPassword') or ''
+    if not username:
+        return jsonify(error='Username cannot be empty'), 400
+    if not current_pw:
+        return jsonify(error='Current password is required to confirm changes'), 400
+    with get_db() as conn:
+        user = row_to_dict(conn.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone())
+        if not user:
+            return jsonify(error='User not found'), 404
+        if user['password_hash'] not in (hash_pass(current_pw), hash_pass_legacy(current_pw)):
+            return jsonify(error='Current password is incorrect'), 401
+        # Check username not taken by someone else
+        existing = row_to_dict(conn.execute(
+            "SELECT id FROM users WHERE username=? AND id!=?", (username, uid)).fetchone())
+        if existing:
+            return jsonify(error='Username already taken'), 409
+        if new_pw:
+            if len(new_pw) < 6:
+                return jsonify(error='New password must be at least 6 characters'), 400
+            conn.execute("UPDATE users SET username=?, password_hash=? WHERE id=?",
+                         (username, hash_pass(new_pw), uid))
+        else:
+            conn.execute("UPDATE users SET username=? WHERE id=?", (username, uid))
+        conn.commit()
+        updated = row_to_dict(conn.execute(
+            "SELECT id,username,full_name,email,role FROM users WHERE id=?", (uid,)).fetchone())
+    return jsonify(updated)
+
 
 @app.route('/api/departments', methods=['GET'])
 @jwt_required()
@@ -406,7 +512,19 @@ def delete_supervisor(sid):
 @app.route('/api/attachees', methods=['GET'])
 @jwt_required()
 def get_attachees():
+    from datetime import date
+    today = date.today().isoformat()
     with get_db() as conn:
+        # Auto-update status: past end_date → Completed, future → Active
+        conn.execute("""
+            UPDATE attachees SET status='Completed'
+            WHERE end_date < ? AND status='Active'
+        """, (today,))
+        conn.execute("""
+            UPDATE attachees SET status='Active'
+            WHERE end_date >= ? AND start_date <= ? AND status='Completed'
+        """, (today, today))
+        conn.commit()
         rows = rows_to_list(conn.execute("SELECT * FROM attachees ORDER BY first_name,last_name").fetchall())
     return jsonify(rows)
 
@@ -499,6 +617,32 @@ def add_eval(aid):
         row = row_to_dict(conn.execute("SELECT * FROM evaluations WHERE id=?", (cur.lastrowid,)).fetchone())
     return jsonify(row), 201
 
+@app.route('/api/attachees/<int:aid>/evaluations/<int:eid>', methods=['PUT'])
+@jwt_required()
+def update_eval(aid, eid):
+    d = request.get_json()
+    with get_db() as conn:
+        conn.execute("""
+            UPDATE evaluations SET date=?,type=?,score=?,performance=?,attendance=?,
+            technical_skills=?,communication=?,punctuality=?,team_work=?,remarks=?,evaluated_by=?
+            WHERE id=? AND attachee_id=?""",
+            (d.get('date'), d.get('type','Monthly'), d.get('score',0),
+             d.get('performance','Good'), d.get('attendance',100),
+             d.get('technicalSkills',''), d.get('communication',''),
+             d.get('punctuality',''), d.get('teamWork',''),
+             d.get('remarks',''), d.get('evaluatedBy'), eid, aid))
+        conn.commit()
+        row = row_to_dict(conn.execute("SELECT * FROM evaluations WHERE id=?", (eid,)).fetchone())
+    return jsonify(row)
+
+@app.route('/api/attachees/<int:aid>/evaluations/<int:eid>', methods=['DELETE'])
+@jwt_required()
+def delete_eval(aid, eid):
+    with get_db() as conn:
+        conn.execute("DELETE FROM evaluations WHERE id=? AND attachee_id=?", (eid, aid))
+        conn.commit()
+    return jsonify(ok=True)
+
 # ─── DOCUMENTS ─────────────────────────────────────────────────────────────────
 
 @app.route('/api/attachees/<int:aid>/documents', methods=['GET'])
@@ -585,10 +729,3 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print(f"\n✅  Kilifi ICT Attachee Server running → http://localhost:{port}\n")
     app.run(host='0.0.0.0', port=port, debug=False)
-
-
-
-
-
-
-
