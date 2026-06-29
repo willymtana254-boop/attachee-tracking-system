@@ -1,6 +1,3 @@
-
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -48,7 +45,7 @@ button, input, select, textarea { font-family: inherit; }
 nav {
   background: var(--navy);
   color: #fff;
-  padding: 0 24px;
+  padding: 0 20px;
   display: flex;
   align-items: center;
   height: 56px;
@@ -56,34 +53,36 @@ nav {
   top: 0;
   z-index: 200;
   box-shadow: 0 2px 8px rgba(0,0,0,.25);
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 6px;
 }
 .nav-brand {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
   color: #fff;
-  margin-right: 16px;
+  margin-right: 10px;
   white-space: nowrap;
   display: flex;
   align-items: center;
   gap: 9px;
 }
 .nav-logo {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
   flex-shrink: 0;
   filter: drop-shadow(0 1px 3px rgba(0,0,0,.3));
 }
 .nav-brand span { color: #38bdf8; }
+
+/* ─── DROPDOWN NAV ──────────────────────────────────────────────────────────── */
 .nav-links {
   display: flex;
   gap: 2px;
   flex: 1;
+  align-items: center;
   flex-wrap: wrap;
 }
-.nav-links button {
+.nav-btn {
   background: transparent;
   border: none;
   color: #cbd5e1;
@@ -93,19 +92,69 @@ nav {
   cursor: pointer;
   font-weight: 500;
   transition: all .15s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  height: 34px;
 }
-.nav-links button:hover,
-.nav-links button.active {
-  background: #2563a8;
-  color: #fff;
+.nav-btn:hover, .nav-btn.active { background: #2563a8; color: #fff; }
+.nav-chevron { font-size: 9px; opacity: .65; transition: transform .2s; display: inline-block; }
+.nav-btn.open .nav-chevron { transform: rotate(180deg); }
+
+.nav-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  min-width: 215px;
+  padding: 6px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.38);
+  z-index: 500;
+  display: none;
+  animation: ddFade .12s ease;
 }
+@keyframes ddFade { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+.nav-dropdown.show { display: block; }
+
+.nav-dd-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 7px;
+  background: transparent;
+  border: none;
+  color: #cbd5e1;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all .15s;
+  text-align: left;
+}
+.nav-dd-item:hover, .nav-dd-item.active { background: #2563a8; color: #fff; }
+
+.nav-dd-divider { height: 1px; background: #334155; margin: 5px 0; }
+.nav-dd-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+  color: #475569;
+  padding: 8px 12px 4px;
+}
+
 .nav-user {
   font-size: 12px;
   color: #94a3b8;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   white-space: nowrap;
+  margin-left: auto;
 }
 .role-badge {
   background: #0ea5e9;
@@ -116,7 +165,7 @@ nav {
   font-weight: 700;
   text-transform: uppercase;
 }
-.nav-user button {
+.nav-user > button {
   background: transparent;
   border: 1px solid #ef4444;
   color: #f87171;
@@ -125,7 +174,12 @@ nav {
   font-size: 11px;
   cursor: pointer;
 }
-.nav-user button:hover { background: #ef4444; color: #fff; }
+.nav-user > button:hover { background: #ef4444; color: #fff; }
+.nav-user .pw-btn {
+  border-color: #475569;
+  color: #94a3b8;
+}
+.nav-user .pw-btn:hover { background: #475569; color: #fff; }
 
 /* ─── LAYOUT ────────────────────────────────────────────────────────────────── */
 .container {
@@ -151,7 +205,7 @@ nav {
 .card {
   background: var(--white);
   border-radius: 10px;
-  box-shadow: 0 1px 4px rgba(5, 224, 63, 0.08);
+  box-shadow: 0 1px 4px rgba(0,0,0,.08);
   padding: 20px;
   margin-bottom: 18px;
 }
@@ -518,6 +572,8 @@ textarea { resize: vertical; min-height: 78px; }
   gap: 10px;
 }
 
+/* ─── NAV DROP WRAPPER needs relative positioning ───────────────────────────── */
+.nav-drop-wrap { position: relative; }
 </style>
 </head>
 <body>
@@ -527,7 +583,7 @@ textarea { resize: vertical; min-height: 78px; }
   <div class="login-wrap">
     <div class="login-card">
       <div class="login-logo">
-        <img src="/klf-logo.webp" alt="Kilifi County Logo" class="login-logo-img">
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%231a3c5e'/%3E%3Ctext x='50' y='62' text-anchor='middle' font-size='36' font-family='Arial' font-weight='bold' fill='white'%3EKC%3C/text%3E%3C/svg%3E" alt="Kilifi County Logo" class="login-logo-img">
         <h1>Kilifi County ICT Attachees</h1>
         <p>Attachee Tracking System v3.0</p>
       </div>
@@ -550,27 +606,54 @@ textarea { resize: vertical; min-height: 78px; }
 <!-- ═══════════════════════════ MAIN APP ═════════════════════════════════════ -->
 <div id="app" style="display:none">
 
-  <!-- NAV -->
+  <!-- ── DROPDOWN NAV ───────────────────────────────────────────────────────── -->
   <nav>
     <div class="nav-brand">
-      <img src="/klf-logo.webp" alt="Kilifi County" class="nav-logo">
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23ffffff33'/%3E%3Ctext x='50' y='62' text-anchor='middle' font-size='36' font-family='Arial' font-weight='bold' fill='white'%3EKC%3C/text%3E%3C/svg%3E" alt="Kilifi County" class="nav-logo">
       Kilifi County <span>ICT Attachees</span>
     </div>
+
     <div class="nav-links">
-      <button onclick="showPage('dashboard')"   id="nb-dashboard">&#9632; Dashboard</button>
-      <button onclick="showPage('attachees')"   id="nb-attachees">&#128100; Attachees</button>
-      <button onclick="showPage('supervisors')" id="nb-supervisors">&#128101; Supervisors</button>
-      <button onclick="showPage('institutions')"id="nb-institutions">&#127979; Institutions</button>
-      <button onclick="showPage('departments')" id="nb-departments">&#127970; Departments</button>
-      <button onclick="showPage('email-config')"id="nb-email-config">&#9993; Email Setup</button>
-      <span id="adminNav" style="display:none">
-        <button onclick="showPage('users')" id="nb-users">&#128273; Users</button>
-      </span>
+
+      <!-- Overview dropdown -->
+      <div class="nav-drop-wrap">
+        <button class="nav-btn" id="nb-overview" onclick="toggleNavDrop(this,'dd-overview')">
+          &#9632; Overview <span class="nav-chevron">&#9660;</span>
+        </button>
+        <div class="nav-dropdown" id="dd-overview">
+          <div class="nav-dd-label">Main</div>
+          <button class="nav-dd-item" id="ndi-dashboard"   onclick="closeDrop();showPage('dashboard')">&#128200; Dashboard</button>
+          <button class="nav-dd-item" id="ndi-attachees"   onclick="closeDrop();showPage('attachees')">&#128100; Attachees</button>
+          <div class="nav-dd-divider"></div>
+          <div class="nav-dd-label">Records</div>
+          <button class="nav-dd-item" id="ndi-supervisors"  onclick="closeDrop();showPage('supervisors')">&#128101; Supervisors</button>
+          <button class="nav-dd-item" id="ndi-institutions" onclick="closeDrop();showPage('institutions')">&#127979; Institutions</button>
+          <button class="nav-dd-item" id="ndi-departments"  onclick="closeDrop();showPage('departments')">&#127970; Departments</button>
+        </div>
+      </div>
+
+      <!-- Admin dropdown (hidden for non-admins) -->
+      <div class="nav-drop-wrap" id="adminNav" style="display:none">
+        <button class="nav-btn" id="nb-admin" onclick="toggleNavDrop(this,'dd-admin')">
+          &#128273; Admin <span class="nav-chevron">&#9660;</span>
+        </button>
+        <div class="nav-dropdown" id="dd-admin">
+          <div class="nav-dd-label">System</div>
+          <button class="nav-dd-item" id="ndi-users"        onclick="closeDrop();showPage('users')">&#128101; Users</button>
+          <button class="nav-dd-item" id="ndi-email-config" onclick="closeDrop();showPage('email-config')">&#9993; Email Setup</button>
+          <div class="nav-dd-divider"></div>
+          <button class="nav-dd-item" onclick="closeDrop();exportCSV()">&#8659; Export CSV</button>
+        </div>
+      </div>
+
+      <button class="nav-btn" onclick="showPage('add-attachee')">&#43; Add Attachee</button>
+
     </div>
+
     <div class="nav-user">
       <span id="navName"></span>
       <span id="navRole" class="role-badge"></span>
-      <button onclick="openChangePasswordModal()">&#128273; Change Password</button>
+      <button class="pw-btn" onclick="openChangePasswordModal()">&#128273; Change Password</button>
       <button onclick="doLogout()">Logout</button>
     </div>
   </nav>
@@ -795,15 +878,43 @@ textarea { resize: vertical; min-height: 78px; }
    ═══════════════════════════════════════════════════════════════ */
 
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
-const API = '';   // same origin — server serves this file
+const API = '';   // same origin
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let currentUser = null;
 let token       = null;
 let currentId   = null;
 
-// In-memory cache (refreshed on each page load)
 let DB = { departments: [], institutions: [], supervisors: [], attachees: [], users: [] };
+
+// ─── DROPDOWN NAV HELPERS ─────────────────────────────────────────────────────
+function toggleNavDrop(btn, id) {
+  const dd     = document.getElementById(id);
+  const isOpen = dd.classList.contains('show');
+  closeDrop();
+  if (!isOpen) {
+    dd.classList.add('show');
+    btn.classList.add('open', 'active');
+  }
+}
+
+function closeDrop() {
+  document.querySelectorAll('.nav-dropdown').forEach(d => d.classList.remove('show'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('open'));
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.nav-drop-wrap') && !e.target.closest('.nav-btn')) {
+    closeDrop();
+  }
+});
+
+// Highlight the active dropdown item
+function setActiveNavItem(page) {
+  document.querySelectorAll('.nav-dd-item').forEach(i => i.classList.remove('active'));
+  const el = document.getElementById('ndi-' + page);
+  if (el) el.classList.add('active');
+}
 
 // ─── API HELPERS ─────────────────────────────────────────────────────────────
 function authHeaders() {
@@ -956,12 +1067,11 @@ function avgAtt(evals) {
 
 // ─── PAGE ROUTING ─────────────────────────────────────────────────────────────
 async function showPage(page) {
+  closeDrop();
   document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
-  document.querySelectorAll('.nav-links button').forEach(b => b.classList.remove('active'));
   const el = document.getElementById('page-' + page);
   if (el) el.style.display = 'block';
-  const nb = document.getElementById('nb-' + page);
-  if (nb) nb.classList.add('active');
+  setActiveNavItem(page);
 
   if      (page === 'dashboard')    { await loadAllData(); renderDashboard(); }
   else if (page === 'attachees')    { await loadAllData(); renderAttacheeList(); populateDeptFilter(); }
@@ -1087,7 +1197,7 @@ function renderAttacheeList() {
     <td>${statusBadge(a.status)}</td>
     <td><div class="btn-group">
       <button class="btn btn-outline btn-sm" onclick="openDetail(${a.id})">View</button>
-      ${canE  ? `<button class="btn btn-ghost btn-sm" onclick="openEdit(${a.id})">Edit</button>`         : ''}
+      ${canE      ? `<button class="btn btn-ghost btn-sm" onclick="openEdit(${a.id})">Edit</button>` : ''}
       ${isAdmin() ? `<button class="btn btn-danger btn-sm" onclick="deleteAttachee(${a.id})">Del</button>` : ''}
     </div></td>
   </tr>`).join('') || '<tr><td colspan="10" class="empty">No attachees found</td></tr>';
@@ -1888,7 +1998,6 @@ async function doChangePassword() {
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
 tryAutoLogin();
-
 </script>
 </body>
 </html>
