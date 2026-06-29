@@ -29,6 +29,7 @@
   --gray-mid:    #e2e8f0;
   --text:        #1e293b;
   --white:       #fff;
+  --sidebar-w:   240px;
 }
 
 /* ─── BASE ──────────────────────────────────────────────────────────────────── */
@@ -41,147 +42,166 @@ body {
 a { color: var(--blue); }
 button, input, select, textarea { font-family: inherit; }
 
-/* ─── NAVIGATION ────────────────────────────────────────────────────────────── */
-nav {
+/* ─── SIDEBAR NAVIGATION ────────────────────────────────────────────────────── */
+.sidebar {
   background: var(--navy);
   color: #fff;
-  padding: 0 20px;
-  display: flex;
-  align-items: center;
-  height: 56px;
-  position: sticky;
+  width: var(--sidebar-w);
+  height: 100vh;
+  position: fixed;
   top: 0;
+  left: 0;
   z-index: 200;
-  box-shadow: 0 2px 8px rgba(0,0,0,.25);
-  gap: 6px;
+  box-shadow: 2px 0 8px rgba(0,0,0,.25);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
 }
-.nav-brand {
+.sidebar-brand {
   font-size: 16px;
   font-weight: 700;
   color: #fff;
-  margin-right: 10px;
-  white-space: nowrap;
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
+  padding: 18px 18px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.12);
 }
-.nav-logo {
-  width: 32px;
-  height: 32px;
+.sidebar-logo {
+  width: 34px;
+  height: 34px;
   object-fit: contain;
   flex-shrink: 0;
   filter: drop-shadow(0 1px 3px rgba(0,0,0,.3));
 }
-.nav-brand span { color: #38bdf8; }
+.sidebar-brand-text { display: flex; flex-direction: column; line-height: 1.25; }
+.sidebar-brand-text .sub { font-size: 11px; color: #94a3b8; font-weight: 500; }
+.sidebar-brand span { color: #38bdf8; }
 
-/* ─── DROPDOWN NAV ──────────────────────────────────────────────────────────── */
-.nav-links {
-  display: flex;
-  gap: 2px;
+.sidebar-links {
   flex: 1;
-  align-items: center;
-  flex-wrap: wrap;
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
 }
-.nav-btn {
-  background: transparent;
-  border: none;
-  color: #cbd5e1;
-  padding: 6px 11px;
-  border-radius: 6px;
-  font-size: 13px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all .15s;
+.sidebar-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .7px;
+  text-transform: uppercase;
+  color: #5b7896;
+  padding: 14px 12px 6px;
+}
+.sidebar-label:first-child { padding-top: 4px; }
+
+.sidebar-item {
   display: flex;
   align-items: center;
-  gap: 5px;
-  white-space: nowrap;
-  height: 34px;
-}
-.nav-btn:hover, .nav-btn.active { background: #2563a8; color: #fff; }
-.nav-chevron { font-size: 9px; opacity: .65; transition: transform .2s; display: inline-block; }
-.nav-btn.open .nav-chevron { transform: rotate(180deg); }
-
-.nav-dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 10px;
-  min-width: 215px;
-  padding: 6px;
-  box-shadow: 0 8px 28px rgba(0,0,0,.38);
-  z-index: 500;
-  display: none;
-  animation: ddFade .12s ease;
-}
-@keyframes ddFade { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
-.nav-dropdown.show { display: block; }
-
-.nav-dd-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  gap: 11px;
   width: 100%;
-  padding: 9px 12px;
-  border-radius: 7px;
+  padding: 10px 12px;
+  border-radius: 8px;
   background: transparent;
   border: none;
   color: #cbd5e1;
-  font-size: 13px;
+  font-size: 13.5px;
   cursor: pointer;
   font-weight: 500;
   transition: all .15s;
   text-align: left;
 }
-.nav-dd-item:hover, .nav-dd-item.active { background: #2563a8; color: #fff; }
-
-.nav-dd-divider { height: 1px; background: #334155; margin: 5px 0; }
-.nav-dd-label {
-  font-size: 10px;
+.sidebar-item:hover { background: rgba(255,255,255,.08); color: #fff; }
+.sidebar-item.active { background: #2563a8; color: #fff; }
+.sidebar-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+.sidebar-badge {
+  margin-left: auto;
+  background: var(--red);
+  color: #fff;
+  font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: .6px;
-  text-transform: uppercase;
-  color: #475569;
-  padding: 8px 12px 4px;
+  padding: 1px 7px;
+  border-radius: 10px;
 }
 
-.nav-user {
-  font-size: 12px;
-  color: #94a3b8;
+.sidebar-divider { height: 1px; background: rgba(255,255,255,.1); margin: 8px 12px; }
+
+.sidebar-add-btn {
+  margin: 8px 10px 4px;
+  background: var(--blue);
+  border: none;
+  color: #fff;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-  margin-left: auto;
+  gap: 8px;
+  transition: background .15s;
 }
-.role-badge {
+.sidebar-add-btn:hover { background: #1d4ed8; }
+
+.sidebar-footer {
+  padding: 14px 12px;
+  border-top: 1px solid rgba(255,255,255,.12);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sidebar-av {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
   background: #0ea5e9;
   color: #fff;
-  padding: 2px 7px;
-  border-radius: 9px;
-  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-weight: 700;
-  text-transform: uppercase;
+  font-size: 13px;
+  flex-shrink: 0;
 }
-.nav-user > button {
-  background: transparent;
-  border: 1px solid #ef4444;
-  color: #f87171;
-  padding: 3px 9px;
-  border-radius: 5px;
-  font-size: 11px;
-  cursor: pointer;
+.sidebar-user-info { flex: 1; min-width: 0; }
+.sidebar-user-info .name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.nav-user > button:hover { background: #ef4444; color: #fff; }
-.nav-user .pw-btn {
-  border-color: #475569;
+.sidebar-user-info .role {
+  font-size: 10.5px;
   color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: .4px;
 }
-.nav-user .pw-btn:hover { background: #475569; color: #fff; }
+.sidebar-footer-actions { display: flex; gap: 4px; }
+.sidebar-icon-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s;
+}
+.sidebar-icon-btn:hover { background: rgba(255,255,255,.1); color: #fff; }
+.sidebar-icon-btn.danger:hover { background: #ef4444; color: #fff; }
 
 /* ─── LAYOUT ────────────────────────────────────────────────────────────────── */
+.main-content {
+  margin-left: var(--sidebar-w);
+  min-height: 100vh;
+}
 .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -199,6 +219,25 @@ nav {
   font-size: 20px;
   font-weight: 700;
   color: var(--navy);
+}
+
+@media (max-width: 880px) {
+  .sidebar { width: 220px; }
+  .main-content { margin-left: 220px; }
+}
+@media (max-width: 680px) {
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: static;
+    flex-direction: row;
+    align-items: center;
+    overflow-x: auto;
+  }
+  .sidebar-links { flex-direction: row; padding: 6px; }
+  .sidebar-label, .sidebar-divider, .sidebar-footer { display: none; }
+  .sidebar-add-btn { display: none; }
+  .main-content { margin-left: 0; }
 }
 
 /* ─── CARDS ─────────────────────────────────────────────────────────────────── */
@@ -571,9 +610,6 @@ textarea { resize: vertical; min-height: 78px; }
   color: var(--navy);
   gap: 10px;
 }
-
-/* ─── NAV DROP WRAPPER needs relative positioning ───────────────────────────── */
-.nav-drop-wrap { position: relative; }
 </style>
 </head>
 <body>
@@ -606,259 +642,269 @@ textarea { resize: vertical; min-height: 78px; }
 <!-- ═══════════════════════════ MAIN APP ═════════════════════════════════════ -->
 <div id="app" style="display:none">
 
-  <!-- ── DROPDOWN NAV ───────────────────────────────────────────────────────── -->
-  <nav>
-    <div class="nav-brand">
-      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23ffffff33'/%3E%3Ctext x='50' y='62' text-anchor='middle' font-size='36' font-family='Arial' font-weight='bold' fill='white'%3EKC%3C/text%3E%3C/svg%3E" alt="Kilifi County" class="nav-logo">
-      Kilifi County <span>ICT Attachees</span>
+  <!-- ── LEFT SIDEBAR NAV ───────────────────────────────────────────────────── -->
+  <div class="sidebar">
+    <div class="sidebar-brand">
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23ffffff33'/%3E%3Ctext x='50' y='62' text-anchor='middle' font-size='36' font-family='Arial' font-weight='bold' fill='white'%3EKC%3C/text%3E%3C/svg%3E" alt="Kilifi County" class="sidebar-logo">
+      <div class="sidebar-brand-text">
+        <div>Kilifi County <span>ICT</span></div>
+        <div class="sub">Attachee Tracking v3</div>
+      </div>
     </div>
 
-    <div class="nav-links">
+    <div class="sidebar-links">
+      <div class="sidebar-label">Main</div>
+      <button class="sidebar-item" id="ndi-dashboard" onclick="showPage('dashboard')">
+        <span class="sidebar-icon">&#128200;</span> Dashboard
+      </button>
+      <button class="sidebar-item" id="ndi-attachees" onclick="showPage('attachees')">
+        <span class="sidebar-icon">&#128100;</span> Attachees
+        <span class="sidebar-badge" id="attacheeCountBadge" style="display:none">0</span>
+      </button>
+      <button class="sidebar-item" id="ndi-supervisors" onclick="showPage('supervisors')">
+        <span class="sidebar-icon">&#128101;</span> Supervisors
+      </button>
 
-      <!-- Overview dropdown -->
-      <div class="nav-drop-wrap">
-        <button class="nav-btn" id="nb-overview" onclick="toggleNavDrop(this,'dd-overview')">
-          &#9632; Overview <span class="nav-chevron">&#9660;</span>
-        </button>
-        <div class="nav-dropdown" id="dd-overview">
-          <div class="nav-dd-label">Main</div>
-          <button class="nav-dd-item" id="ndi-dashboard"   onclick="closeDrop();showPage('dashboard')">&#128200; Dashboard</button>
-          <button class="nav-dd-item" id="ndi-attachees"   onclick="closeDrop();showPage('attachees')">&#128100; Attachees</button>
-          <div class="nav-dd-divider"></div>
-          <div class="nav-dd-label">Records</div>
-          <button class="nav-dd-item" id="ndi-supervisors"  onclick="closeDrop();showPage('supervisors')">&#128101; Supervisors</button>
-          <button class="nav-dd-item" id="ndi-institutions" onclick="closeDrop();showPage('institutions')">&#127979; Institutions</button>
-          <button class="nav-dd-item" id="ndi-departments"  onclick="closeDrop();showPage('departments')">&#127970; Departments</button>
+      <div class="sidebar-label">Setup</div>
+      <button class="sidebar-item" id="ndi-institutions" onclick="showPage('institutions')">
+        <span class="sidebar-icon">&#127979;</span> Institutions
+      </button>
+      <button class="sidebar-item" id="ndi-departments" onclick="showPage('departments')">
+        <span class="sidebar-icon">&#127970;</span> Departments
+      </button>
+      <button class="sidebar-item" id="ndi-email-config" onclick="showPage('email-config')">
+        <span class="sidebar-icon">&#9993;</span> Email Setup
+      </button>
+
+      <div class="sidebar-label" id="adminLabel" style="display:none">Admin</div>
+      <button class="sidebar-item" id="ndi-users" onclick="showPage('users')" style="display:none">
+        <span class="sidebar-icon">&#128273;</span> Users
+      </button>
+      <button class="sidebar-item" id="ndi-export" onclick="exportCSV()" style="display:none">
+        <span class="sidebar-icon">&#8659;</span> Export CSV
+      </button>
+    </div>
+
+    <button class="sidebar-add-btn" onclick="showPage('add-attachee')">
+      <span>&#43;</span> Add Attachee
+    </button>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-av" id="sbAvatar">U</div>
+      <div class="sidebar-user-info">
+        <div class="name" id="navName"></div>
+        <div class="role" id="navRole"></div>
+      </div>
+      <div class="sidebar-footer-actions">
+        <button class="sidebar-icon-btn" title="Change Password" onclick="openChangePasswordModal()">&#128273;</button>
+        <button class="sidebar-icon-btn danger" title="Logout" onclick="doLogout()">&#8650;</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="container">
+      <div id="flashArea"></div>
+
+      <!-- ── DASHBOARD ──────────────────────────────────────────────────────── -->
+      <div id="page-dashboard" class="page" style="display:none">
+        <div class="page-header">
+          <div class="page-title">Dashboard</div>
+          <div class="btn-group">
+            <button class="btn btn-outline btn-sm" onclick="exportCSV()">&#8659; Export CSV</button>
+            <button class="btn btn-primary btn-sm" onclick="showPage('add-attachee')">+ Add Attachee</button>
+          </div>
         </div>
+        <div class="stats-grid" id="dashStats"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;flex-wrap:wrap">
+          <div class="card"><div class="card-title">Department Summary</div><div id="deptSummary"></div></div>
+          <div class="card"><div class="card-title">&#9888; Ending Within 14 Days</div><div id="endingSoon"></div></div>
+        </div>
+        <div class="card"><div class="card-title">&#127942; Top Performers</div><div id="topPerformers"></div></div>
+        <div class="card"><div class="card-title">Recent Attachees</div><div id="recentList"></div></div>
       </div>
 
-      <!-- Admin dropdown (hidden for non-admins) -->
-      <div class="nav-drop-wrap" id="adminNav" style="display:none">
-        <button class="nav-btn" id="nb-admin" onclick="toggleNavDrop(this,'dd-admin')">
-          &#128273; Admin <span class="nav-chevron">&#9660;</span>
-        </button>
-        <div class="nav-dropdown" id="dd-admin">
-          <div class="nav-dd-label">System</div>
-          <button class="nav-dd-item" id="ndi-users"        onclick="closeDrop();showPage('users')">&#128101; Users</button>
-          <button class="nav-dd-item" id="ndi-email-config" onclick="closeDrop();showPage('email-config')">&#9993; Email Setup</button>
-          <div class="nav-dd-divider"></div>
-          <button class="nav-dd-item" onclick="closeDrop();exportCSV()">&#8659; Export CSV</button>
-        </div>
-      </div>
-
-      <button class="nav-btn" onclick="showPage('add-attachee')">&#43; Add Attachee</button>
-
-    </div>
-
-    <div class="nav-user">
-      <span id="navName"></span>
-      <span id="navRole" class="role-badge"></span>
-      <button class="pw-btn" onclick="openChangePasswordModal()">&#128273; Change Password</button>
-      <button onclick="doLogout()">Logout</button>
-    </div>
-  </nav>
-
-  <div class="container">
-    <div id="flashArea"></div>
-
-    <!-- ── DASHBOARD ──────────────────────────────────────────────────────── -->
-    <div id="page-dashboard" class="page" style="display:none">
-      <div class="page-header">
-        <div class="page-title">Dashboard</div>
-        <div class="btn-group">
-          <button class="btn btn-outline btn-sm" onclick="exportCSV()">&#8659; Export CSV</button>
+      <!-- ── ATTACHEES LIST ──────────────────────────────────────────────────── -->
+      <div id="page-attachees" class="page" style="display:none">
+        <div class="page-header">
+          <div class="page-title">All Attachees</div>
           <button class="btn btn-primary btn-sm" onclick="showPage('add-attachee')">+ Add Attachee</button>
         </div>
-      </div>
-      <div class="stats-grid" id="dashStats"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;flex-wrap:wrap">
-        <div class="card"><div class="card-title">Department Summary</div><div id="deptSummary"></div></div>
-        <div class="card"><div class="card-title">&#9888; Ending Within 14 Days</div><div id="endingSoon"></div></div>
-      </div>
-      <div class="card"><div class="card-title">&#127942; Top Performers</div><div id="topPerformers"></div></div>
-      <div class="card"><div class="card-title">Recent Attachees</div><div id="recentList"></div></div>
-    </div>
-
-    <!-- ── ATTACHEES LIST ──────────────────────────────────────────────────── -->
-    <div id="page-attachees" class="page" style="display:none">
-      <div class="page-header">
-        <div class="page-title">All Attachees</div>
-        <button class="btn btn-primary btn-sm" onclick="showPage('add-attachee')">+ Add Attachee</button>
-      </div>
-      <div class="filter-bar">
-        <input type="text" id="srchTerm" placeholder="&#128269; Search name, course, institution…" oninput="renderAttacheeList()">
-        <select id="srchStatus" onchange="renderAttacheeList()">
-          <option value="">All Statuses</option>
-          <option>Active</option><option>Completed</option><option>Terminated</option><option>Deferred</option>
-        </select>
-        <select id="srchDept" onchange="renderAttacheeList()">
-          <option value="">All Departments</option>
-        </select>
-      </div>
-      <div class="card" style="padding:0">
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr><th>#</th><th>Name</th><th>Institution</th><th>Course</th><th>Department</th>
-                  <th>Start</th><th>End</th><th>Days Left</th><th>Status</th><th>Actions</th></tr>
-            </thead>
-            <tbody id="attacheeBody"></tbody>
-          </table>
+        <div class="filter-bar">
+          <input type="text" id="srchTerm" placeholder="&#128269; Search name, course, institution…" oninput="renderAttacheeList()">
+          <select id="srchStatus" onchange="renderAttacheeList()">
+            <option value="">All Statuses</option>
+            <option>Active</option><option>Completed</option><option>Terminated</option><option>Deferred</option>
+          </select>
+          <select id="srchDept" onchange="renderAttacheeList()">
+            <option value="">All Departments</option>
+          </select>
         </div>
-      </div>
-    </div>
-
-    <!-- ── ATTACHEE DETAIL ─────────────────────────────────────────────────── -->
-    <div id="page-attachee-detail" class="page" style="display:none">
-      <div class="page-header">
-        <button class="btn btn-ghost btn-sm" onclick="showPage('attachees')">&#8592; Back</button>
-        <div class="btn-group" id="detailBtns"></div>
-      </div>
-      <div id="detailContent"></div>
-    </div>
-
-    <!-- ── ADD ATTACHEE ────────────────────────────────────────────────────── -->
-    <div id="page-add-attachee" class="page" style="display:none">
-      <div class="page-header">
-        <div class="page-title">Add New Attachee</div>
-        <button class="btn btn-ghost btn-sm" onclick="showPage('attachees')">&#8592; Cancel</button>
-      </div>
-      <div class="card"><div id="addAttacheeFormWrap"></div></div>
-    </div>
-
-    <!-- ── EDIT ATTACHEE ───────────────────────────────────────────────────── -->
-    <div id="page-edit-attachee" class="page" style="display:none">
-      <div class="page-header">
-        <div class="page-title">Edit Attachee</div>
-        <button class="btn btn-ghost btn-sm" onclick="openDetail(currentId)">&#8592; Cancel</button>
-      </div>
-      <div class="card"><div id="editAttacheeFormWrap"></div></div>
-    </div>
-
-    <!-- ── ADD EVALUATION ─────────────────────────────────────────────────── -->
-    <div id="page-add-eval" class="page" style="display:none">
-      <div class="page-header">
-        <div class="page-title" id="evalPageTitle">Add Evaluation</div>
-        <button class="btn btn-ghost btn-sm" onclick="openDetail(currentId)">&#8592; Cancel</button>
-      </div>
-      <div class="card"><div id="evalFormWrap"></div></div>
-    </div>
-
-    <!-- ── ADD DOCUMENT ───────────────────────────────────────────────────── -->
-    <div id="page-add-doc" class="page" style="display:none">
-      <div class="page-header">
-        <div class="page-title" id="docPageTitle">Record Document</div>
-        <button class="btn btn-ghost btn-sm" onclick="openDetail(currentId)">&#8592; Cancel</button>
-      </div>
-      <div class="card"><div id="docFormWrap"></div></div>
-    </div>
-
-    <!-- ── SUPERVISORS ─────────────────────────────────────────────────────── -->
-    <div id="page-supervisors" class="page" style="display:none">
-      <div class="page-header">
-        <div class="page-title">Supervisors</div>
-        <button class="btn btn-primary btn-sm" id="addSupBtn" onclick="showPage('add-supervisor')">+ Add Supervisor</button>
-      </div>
-      <div class="card" style="padding:0">
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>#</th><th>Name</th><th>Department</th><th>Job Title</th><th>Phone</th><th>Email</th><th>Actions</th></tr></thead>
-            <tbody id="supBody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── ADD SUPERVISOR ─────────────────────────────────────────────────── -->
-    <div id="page-add-supervisor" class="page" style="display:none">
-      <div class="page-header">
-        <div class="page-title">Add Supervisor</div>
-        <button class="btn btn-ghost btn-sm" onclick="showPage('supervisors')">&#8592; Cancel</button>
-      </div>
-      <div class="card"><div id="addSupWrap"></div></div>
-    </div>
-
-    <!-- ── INSTITUTIONS ────────────────────────────────────────────────────── -->
-    <div id="page-institutions" class="page" style="display:none">
-      <div class="page-header">
-        <div class="page-title">&#127979; Manage Institutions</div>
-        <button class="btn btn-primary btn-sm" onclick="openInstForm(null)" id="addInstBtn">&#43; Add Institution</button>
-      </div>
-      <div id="instFormWrap"></div>
-      <div class="card" style="padding:0">
-        <table>
-          <thead><tr><th>#</th><th>Institution Name</th><th>Type</th><th>County</th><th>Contact</th><th>Email</th><th>Actions</th></tr></thead>
-          <tbody id="instBody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- ── DEPARTMENTS ─────────────────────────────────────────────────────── -->
-    <div id="page-departments" class="page" style="display:none">
-      <div class="page-header">
-        <div class="page-title">&#127970; Manage Departments</div>
-        <button class="btn btn-primary btn-sm" onclick="openDeptForm(null)" id="addDeptBtn">&#43; Add Department</button>
-      </div>
-      <div id="deptFormWrap"></div>
-      <div class="card" style="padding:0">
-        <table>
-          <thead><tr><th>#</th><th>Department Name</th><th>Description</th><th>Attachees</th><th>Actions</th></tr></thead>
-          <tbody id="deptBody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- ── USERS ───────────────────────────────────────────────────────────── -->
-    <div id="page-users" class="page" style="display:none">
-      <div class="page-header">
-        <div class="page-title">User Management</div>
-        <button class="btn btn-primary btn-sm" onclick="showPage('add-user')">+ Add User</button>
-      </div>
-      <div class="card" style="padding:0">
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>#</th><th>Username</th><th>Full Name</th><th>Email</th><th>Role</th><th>Actions</th></tr></thead>
-            <tbody id="userBody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── ADD USER ────────────────────────────────────────────────────────── -->
-    <div id="page-add-user" class="page" style="display:none">
-      <div class="page-header">
-        <div class="page-title">Add User</div>
-        <button class="btn btn-ghost btn-sm" onclick="showPage('users')">&#8592; Cancel</button>
-      </div>
-      <div class="card"><div id="addUserWrap"></div></div>
-    </div>
-
-    <!-- ── EMAIL CONFIG ────────────────────────────────────────────────────── -->
-    <div id="page-email-config" class="page" style="display:none">
-      <div class="page-header"><div class="page-title">&#9993; Email Configuration</div></div>
-      <div class="card">
-        <p style="font-size:13.5px;color:var(--gray);margin-bottom:18px;line-height:1.6">
-          Configure the HOD email. Status changes to <strong>Terminated</strong> or
-          <strong>Completed</strong> will open your email client with an alert pre-written.
-        </p>
-        <div class="form-grid">
-          <div class="form-group">
-            <label>HOD Email Address <span class="req">*</span></label>
-            <input type="email" id="cfgHod" placeholder="hod@kilifi.go.ke">
+        <div class="card" style="padding:0">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>#</th><th>Name</th><th>Institution</th><th>Course</th><th>Department</th>
+                    <th>Start</th><th>End</th><th>Days Left</th><th>Status</th><th>Actions</th></tr>
+              </thead>
+              <tbody id="attacheeBody"></tbody>
+            </table>
           </div>
-          <div class="form-group"><label>HOD Name</label><input type="text" id="cfgHodName" placeholder="Faith Kadenge (HOD)"></div>
-          <div class="form-group"><label>Your (Sender) Name</label><input type="text" id="cfgSender"></div>
-          <div class="form-group"><label>Your Email</label><input type="email" id="cfgFrom"></div>
         </div>
-        <div class="btn-group" style="margin-top:16px">
-          <button class="btn btn-primary" onclick="saveEmailConfig()">&#128190; Save</button>
-          <button class="btn btn-outline" onclick="testEmail()">&#9993; Test Email</button>
-        </div>
-        <div id="cfgStatus" style="margin-top:12px"></div>
       </div>
-    </div>
 
-  </div><!-- /container -->
+      <!-- ── ATTACHEE DETAIL ─────────────────────────────────────────────────── -->
+      <div id="page-attachee-detail" class="page" style="display:none">
+        <div class="page-header">
+          <button class="btn btn-ghost btn-sm" onclick="showPage('attachees')">&#8592; Back</button>
+          <div class="btn-group" id="detailBtns"></div>
+        </div>
+        <div id="detailContent"></div>
+      </div>
+
+      <!-- ── ADD ATTACHEE ────────────────────────────────────────────────────── -->
+      <div id="page-add-attachee" class="page" style="display:none">
+        <div class="page-header">
+          <div class="page-title">Add New Attachee</div>
+          <button class="btn btn-ghost btn-sm" onclick="showPage('attachees')">&#8592; Cancel</button>
+        </div>
+        <div class="card"><div id="addAttacheeFormWrap"></div></div>
+      </div>
+
+      <!-- ── EDIT ATTACHEE ───────────────────────────────────────────────────── -->
+      <div id="page-edit-attachee" class="page" style="display:none">
+        <div class="page-header">
+          <div class="page-title">Edit Attachee</div>
+          <button class="btn btn-ghost btn-sm" onclick="openDetail(currentId)">&#8592; Cancel</button>
+        </div>
+        <div class="card"><div id="editAttacheeFormWrap"></div></div>
+      </div>
+
+      <!-- ── ADD EVALUATION ─────────────────────────────────────────────────── -->
+      <div id="page-add-eval" class="page" style="display:none">
+        <div class="page-header">
+          <div class="page-title" id="evalPageTitle">Add Evaluation</div>
+          <button class="btn btn-ghost btn-sm" onclick="openDetail(currentId)">&#8592; Cancel</button>
+        </div>
+        <div class="card"><div id="evalFormWrap"></div></div>
+      </div>
+
+      <!-- ── ADD DOCUMENT ───────────────────────────────────────────────────── -->
+      <div id="page-add-doc" class="page" style="display:none">
+        <div class="page-header">
+          <div class="page-title" id="docPageTitle">Record Document</div>
+          <button class="btn btn-ghost btn-sm" onclick="openDetail(currentId)">&#8592; Cancel</button>
+        </div>
+        <div class="card"><div id="docFormWrap"></div></div>
+      </div>
+
+      <!-- ── SUPERVISORS ─────────────────────────────────────────────────────── -->
+      <div id="page-supervisors" class="page" style="display:none">
+        <div class="page-header">
+          <div class="page-title">Supervisors</div>
+          <button class="btn btn-primary btn-sm" id="addSupBtn" onclick="showPage('add-supervisor')">+ Add Supervisor</button>
+        </div>
+        <div class="card" style="padding:0">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Name</th><th>Department</th><th>Job Title</th><th>Phone</th><th>Email</th><th>Actions</th></tr></thead>
+              <tbody id="supBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ADD SUPERVISOR ─────────────────────────────────────────────────── -->
+      <div id="page-add-supervisor" class="page" style="display:none">
+        <div class="page-header">
+          <div class="page-title">Add Supervisor</div>
+          <button class="btn btn-ghost btn-sm" onclick="showPage('supervisors')">&#8592; Cancel</button>
+        </div>
+        <div class="card"><div id="addSupWrap"></div></div>
+      </div>
+
+      <!-- ── INSTITUTIONS ────────────────────────────────────────────────────── -->
+      <div id="page-institutions" class="page" style="display:none">
+        <div class="page-header">
+          <div class="page-title">&#127979; Manage Institutions</div>
+          <button class="btn btn-primary btn-sm" onclick="openInstForm(null)" id="addInstBtn">&#43; Add Institution</button>
+        </div>
+        <div id="instFormWrap"></div>
+        <div class="card" style="padding:0">
+          <table>
+            <thead><tr><th>#</th><th>Institution Name</th><th>Type</th><th>County</th><th>Contact</th><th>Email</th><th>Actions</th></tr></thead>
+            <tbody id="instBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── DEPARTMENTS ─────────────────────────────────────────────────────── -->
+      <div id="page-departments" class="page" style="display:none">
+        <div class="page-header">
+          <div class="page-title">&#127970; Manage Departments</div>
+          <button class="btn btn-primary btn-sm" onclick="openDeptForm(null)" id="addDeptBtn">&#43; Add Department</button>
+        </div>
+        <div id="deptFormWrap"></div>
+        <div class="card" style="padding:0">
+          <table>
+            <thead><tr><th>#</th><th>Department Name</th><th>Description</th><th>Attachees</th><th>Actions</th></tr></thead>
+            <tbody id="deptBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── USERS ───────────────────────────────────────────────────────────── -->
+      <div id="page-users" class="page" style="display:none">
+        <div class="page-header">
+          <div class="page-title">User Management</div>
+          <button class="btn btn-primary btn-sm" onclick="showPage('add-user')">+ Add User</button>
+        </div>
+        <div class="card" style="padding:0">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Username</th><th>Full Name</th><th>Email</th><th>Role</th><th>Actions</th></tr></thead>
+              <tbody id="userBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ADD USER ────────────────────────────────────────────────────────── -->
+      <div id="page-add-user" class="page" style="display:none">
+        <div class="page-header">
+          <div class="page-title">Add User</div>
+          <button class="btn btn-ghost btn-sm" onclick="showPage('users')">&#8592; Cancel</button>
+        </div>
+        <div class="card"><div id="addUserWrap"></div></div>
+      </div>
+
+      <!-- ── EMAIL CONFIG ────────────────────────────────────────────────────── -->
+      <div id="page-email-config" class="page" style="display:none">
+        <div class="page-header"><div class="page-title">&#9993; Email Configuration</div></div>
+        <div class="card">
+          <p style="font-size:13.5px;color:var(--gray);margin-bottom:18px;line-height:1.6">
+            Configure the HOD email. Status changes to <strong>Terminated</strong> or
+            <strong>Completed</strong> will open your email client with an alert pre-written.
+          </p>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>HOD Email Address <span class="req">*</span></label>
+              <input type="email" id="cfgHod" placeholder="hod@kilifi.go.ke">
+            </div>
+            <div class="form-group"><label>HOD Name</label><input type="text" id="cfgHodName" placeholder="Faith Kadenge (HOD)"></div>
+            <div class="form-group"><label>Your (Sender) Name</label><input type="text" id="cfgSender"></div>
+            <div class="form-group"><label>Your Email</label><input type="email" id="cfgFrom"></div>
+          </div>
+          <div class="btn-group" style="margin-top:16px">
+            <button class="btn btn-primary" onclick="saveEmailConfig()">&#128190; Save</button>
+            <button class="btn btn-outline" onclick="testEmail()">&#9993; Test Email</button>
+          </div>
+          <div id="cfgStatus" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+    </div><!-- /container -->
+  </div><!-- /main-content -->
 </div><!-- /app -->
 
 <!-- ═══════════════════════════ MODAL ════════════════════════════════════════ -->
@@ -887,31 +933,9 @@ let currentId   = null;
 
 let DB = { departments: [], institutions: [], supervisors: [], attachees: [], users: [] };
 
-// ─── DROPDOWN NAV HELPERS ─────────────────────────────────────────────────────
-function toggleNavDrop(btn, id) {
-  const dd     = document.getElementById(id);
-  const isOpen = dd.classList.contains('show');
-  closeDrop();
-  if (!isOpen) {
-    dd.classList.add('show');
-    btn.classList.add('open', 'active');
-  }
-}
-
-function closeDrop() {
-  document.querySelectorAll('.nav-dropdown').forEach(d => d.classList.remove('show'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('open'));
-}
-
-document.addEventListener('click', e => {
-  if (!e.target.closest('.nav-drop-wrap') && !e.target.closest('.nav-btn')) {
-    closeDrop();
-  }
-});
-
-// Highlight the active dropdown item
+// Highlight the active sidebar item
 function setActiveNavItem(page) {
-  document.querySelectorAll('.nav-dd-item').forEach(i => i.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
   const el = document.getElementById('ndi-' + page);
   if (el) el.classList.add('active');
 }
@@ -1000,8 +1024,12 @@ async function startApp() {
   document.getElementById('app').style.display       = 'block';
   document.getElementById('navName').textContent     = currentUser.fullName;
   document.getElementById('navRole').textContent     = currentUser.role;
-  document.getElementById('adminNav').style.display  = currentUser.role === 'admin' ? '' : 'none';
-  document.getElementById('addSupBtn').style.display = currentUser.role === 'admin' ? '' : 'none';
+  document.getElementById('sbAvatar').textContent     = initials(currentUser.fullName);
+  const adminOn = currentUser.role === 'admin';
+  document.getElementById('ndi-users').style.display   = adminOn ? '' : 'none';
+  document.getElementById('ndi-export').style.display  = adminOn ? '' : 'none';
+  document.getElementById('adminLabel').style.display   = adminOn ? '' : 'none';
+  document.getElementById('addSupBtn').style.display   = adminOn ? '' : 'none';
   await loadAllData();
   showPage('dashboard');
 }
@@ -1020,6 +1048,11 @@ async function loadAllData() {
   DB.attachees    = attachees;
   if (currentUser.role === 'admin') {
     DB.users = await apiFetch('/api/users');
+  }
+  const badge = document.getElementById('attacheeCountBadge');
+  if (badge) {
+    badge.textContent = DB.attachees.length;
+    badge.style.display = DB.attachees.length ? '' : 'none';
   }
 }
 
@@ -1067,7 +1100,6 @@ function avgAtt(evals) {
 
 // ─── PAGE ROUTING ─────────────────────────────────────────────────────────────
 async function showPage(page) {
-  closeDrop();
   document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
   const el = document.getElementById('page-' + page);
   if (el) el.style.display = 'block';
