@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -615,6 +614,45 @@ textarea { resize: vertical; min-height: 78px; }
   color: var(--navy);
   gap: 10px;
 }
+
+/* ─── FILE UPLOAD ZONE ──────────────────────────────────────────────────────── */
+.upload-zone {
+  border: 2px dashed var(--blue-mid);
+  border-radius: 10px;
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  background: #f8faff;
+  position: relative;
+}
+.upload-zone:hover, .upload-zone.drag-over {
+  border-color: var(--blue);
+  background: var(--blue-light);
+}
+.upload-zone input[type=file] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer;
+  width: 100%; height: 100%; border: none; padding: 0;
+}
+.upload-zone .upload-icon { font-size: 32px; margin-bottom: 8px; display: block; }
+.upload-zone .upload-text { font-size: 13px; color: var(--gray); }
+.upload-zone .upload-text strong { color: var(--blue); }
+
+.file-list { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.file-item {
+  display: flex; align-items: center; gap: 10px;
+  background: #fff; border: 1px solid var(--gray-mid);
+  border-radius: 8px; padding: 10px 13px;
+}
+.file-item .file-icon { font-size: 20px; flex-shrink: 0; }
+.file-item .file-info { flex: 1; min-width: 0; }
+.file-item .file-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-item .file-meta { font-size: 11px; color: var(--gray); margin-top: 2px; }
+.file-item .file-remove { background: transparent; border: none; color: var(--red); font-size: 16px; cursor: pointer; flex-shrink: 0; padding: 2px 4px; border-radius: 4px; }
+.file-item .file-remove:hover { background: var(--red-light); }
+.file-item .file-status { font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 2px 7px; border-radius: 6px; flex-shrink: 0; }
+.file-status.stored { background: var(--green-light); color: #15803d; }
+.file-status.new    { background: var(--blue-light); color: #1d4ed8; }
 </style>
 </head>
 <body>
@@ -794,10 +832,10 @@ textarea { resize: vertical; min-height: 78px; }
         <div class="card"><div id="evalFormWrap"></div></div>
       </div>
 
-      <!-- ── ADD DOCUMENT ───────────────────────────────────────────────────── -->
+      <!-- ── ADD DOCUMENT (UPLOAD) ──────────────────────────────────────────── -->
       <div id="page-add-doc" class="page" style="display:none">
         <div class="page-header">
-          <div class="page-title" id="docPageTitle">Record Document</div>
+          <div class="page-title" id="docPageTitle">Upload Document</div>
           <button class="btn btn-ghost btn-sm" onclick="openDetail(currentId)">&#8592; Cancel</button>
         </div>
         <div class="card"><div id="docFormWrap"></div></div>
@@ -935,6 +973,7 @@ const API = '';   // same origin
 let currentUser = null;
 let token       = null;
 let currentId   = null;
+let pendingUploadFiles = []; // files staged for upload before saving
 
 let DB = { departments: [], institutions: [], supervisors: [], attachees: [], users: [] };
 
@@ -1088,7 +1127,6 @@ function enrichAttachee(a) {
     departmentId:  deptId, institutionId: instId, supervisorId: supId,
     firstName:     a.first_name || a.firstName,
     lastName:      a.last_name  || a.lastName,
-    idNumber:      a.id_number  || a.idNumber  || '',
     yearOfStudy:   a.year_of_study || a.yearOfStudy,
     regNo:         a.reg_no || a.regNo || '',
   };
@@ -1157,6 +1195,20 @@ function initials(name) { return (name || '?').split(' ').map(w => w[0]).slice(0
 function canEdit()  { return currentUser && (currentUser.role === 'admin' || currentUser.role === 'supervisor'); }
 function isAdmin()  { return currentUser && currentUser.role === 'admin'; }
 function todayStr() { return new Date().toISOString().split('T')[0]; }
+function fileSizeStr(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+function fileIcon(name) {
+  const ext = (name.split('.').pop() || '').toLowerCase();
+  if (['pdf'].includes(ext)) return '📕';
+  if (['doc','docx'].includes(ext)) return '📘';
+  if (['xls','xlsx','csv'].includes(ext)) return '📗';
+  if (['jpg','jpeg','png','gif','webp'].includes(ext)) return '🖼️';
+  if (['zip','rar','7z'].includes(ext)) return '🗜️';
+  return '📄';
+}
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 function renderDashboard() {
@@ -1278,17 +1330,20 @@ async function openDetail(id) {
     </div>`;
   }).join('') : '<div class="empty">No evaluations yet</div>';
 
-  const docHtml = docs.length ? `<div class="table-wrap"><table>
-    <thead><tr><th>Type</th><th>File Name</th><th>Issued</th><th>Notes</th></tr></thead>
-    <tbody>${docs.map(d => `<tr>
-      <td><span class="badge badge-gray">${d.doc_type || '—'}</span></td>
-      <td>${d.file_name}</td><td>${d.issued_date || '—'}</td><td>${d.notes || '—'}</td>
-    </tr>`).join('')}</tbody></table></div>`
-    : '<div class="empty">No documents recorded</div>';
+  const docHtml = docs.length ? `<div class="file-list">${docs.map(d => `
+    <div class="file-item">
+      <span class="file-icon">${fileIcon(d.file_name)}</span>
+      <div class="file-info">
+        <div class="file-name">${d.file_name}</div>
+        <div class="file-meta">${d.doc_type || 'Document'}${d.issued_date ? ' · Uploaded ' + d.issued_date : ''}${d.notes ? ' · ' + d.notes : ''}</div>
+      </div>
+      <span class="badge badge-gray">${d.doc_type || '—'}</span>
+    </div>`).join('')}</div>`
+    : '<div class="empty">No documents uploaded yet</div>';
 
   document.getElementById('detailBtns').innerHTML = canE ? `
     <button class="btn btn-primary btn-sm" onclick="openAddEval(${id})">+ Evaluation</button>
-    <button class="btn btn-outline btn-sm" onclick="openAddDoc(${id})">+ Document</button>
+    <button class="btn btn-outline btn-sm" onclick="openAddDoc(${id})">&#8593; Upload Document</button>
     <button class="btn btn-ghost btn-sm" onclick="openEdit(${id})">&#9998; Edit</button>
     <button class="btn btn-warning btn-sm" onclick="openStatusModal(${id},'${a.status}')">&#8635; Status</button>
     <button class="btn btn-success btn-sm" onclick="sendReportToHOD(${id})">&#128231; Send Report</button>` : '';
@@ -1306,7 +1361,6 @@ async function openDetail(id) {
       <div class="detail-grid">
         <div>
           <div class="form-section-hd">Personal &amp; Academic</div>
-          <div class="info-row"><span class="info-label">ID Number</span><span>${a.idNumber || '—'}</span></div>
           <div class="info-row"><span class="info-label">Gender</span><span>${raw.gender || '—'}</span></div>
           <div class="info-row"><span class="info-label">Date of Birth</span><span>${raw.dob || '—'}</span></div>
           <div class="info-row"><span class="info-label">Phone</span><span>${raw.phone || '—'}</span></div>
@@ -1329,7 +1383,7 @@ async function openDetail(id) {
           <div class="info-row"><span class="info-label">Last Evaluated</span><span>${evals[0]?.date || '—'}</span></div>
         </div>
       </div>
-      ${raw.notes ? `<div style="margin-top:12px;padding:10px;background:var(--blue-light);border-radius:6px;font-size:13px;color:#1e40af"><strong>Notes:</strong> ${raw.notes}</div>` : ''}
+      ${raw.notes ? `<div style="margin-top:12px;padding:10px;background:var(--blue-light);border-radius:6px;font-size:13px;color:#1e40af"><strong>&#127919; Skills:</strong> ${raw.notes}</div>` : ''}
     </div>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -1340,8 +1394,8 @@ async function openDetail(id) {
     </div>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div class="card-title" style="margin:0;border:0;padding:0">Documents on File</div>
-        ${canE ? `<button class="btn btn-outline btn-sm" onclick="openAddDoc(${id})">+ Record</button>` : ''}
+        <div class="card-title" style="margin:0;border:0;padding:0">&#128193; Documents on File</div>
+        ${canE ? `<button class="btn btn-outline btn-sm" onclick="openAddDoc(${id})">&#8593; Upload</button>` : ''}
       </div>
       ${docHtml}
     </div>
@@ -1367,13 +1421,12 @@ function renderAttacheeForm(existing) {
     <div class="form-grid">
       <div class="form-group"><label>First Name <span class="req">*</span></label><input id="f_fn" value="${fn}"></div>
       <div class="form-group"><label>Last Name <span class="req">*</span></label><input id="f_ln" value="${ln}"></div>
-      <div class="form-group"><label>ID Number</label><input id="f_id" value="${a.id_number || a.idNumber || ''}"></div>
+      <div class="form-group"><label>Phone <span class="req">*</span></label><input id="f_ph" value="${a.phone || ''}" placeholder="e.g. 07XXXXXXXX"></div>
       <div class="form-group"><label>Gender</label><select id="f_gd"><option value="">—</option>
         <option${a.gender === 'Male'   ? ' selected' : ''}>Male</option>
         <option${a.gender === 'Female' ? ' selected' : ''}>Female</option>
         <option${a.gender === 'Other'  ? ' selected' : ''}>Other</option></select></div>
       <div class="form-group"><label>Date of Birth</label><input type="date" id="f_dob" value="${a.dob || ''}"></div>
-      <div class="form-group"><label>Phone</label><input id="f_ph" value="${a.phone || ''}"></div>
       <div class="form-group"><label>Email</label><input type="email" id="f_em" value="${a.email || ''}"></div>
     </div>
     <div class="form-section-hd">Academic Details</div>
@@ -1391,7 +1444,7 @@ function renderAttacheeForm(existing) {
       <div class="form-group"><label>End Date <span class="req">*</span></label><input type="date" id="f_ed" value="${a.end_date || a.endDate || ''}"></div>
       ${isEdit ? `<div class="form-group"><label>Status</label><select id="f_st">${statusOpts}</select></div>` : ''}
     </div>
-    <div class="form-group" style="margin-top:12px"><label>Notes</label><textarea id="f_no">${a.notes || ''}</textarea></div>
+    <div class="form-group" style="margin-top:12px"><label>&#127919; Skills</label><textarea id="f_no" placeholder="List relevant skills (e.g. Python, Networking, Customer Service…)">${a.notes || ''}</textarea></div>
     <div class="btn-group" style="margin-top:16px">
       <button class="btn btn-primary" onclick="${isEdit ? `doSaveEdit(${a.id})` : 'doSaveAdd()'}">${isEdit ? 'Save Changes' : 'Add Attachee'}</button>
       <button class="btn btn-ghost" onclick="showPage('${isEdit ? 'attachee-detail' : 'attachees'}')">Cancel</button>
@@ -1403,7 +1456,6 @@ function getFormVals(isEdit) {
   return {
     firstName:     document.getElementById('f_fn').value.trim(),
     lastName:      document.getElementById('f_ln').value.trim(),
-    idNumber:      document.getElementById('f_id').value.trim(),
     gender:        document.getElementById('f_gd').value,
     dob:           document.getElementById('f_dob').value,
     phone:         document.getElementById('f_ph').value.trim(),
@@ -1424,6 +1476,7 @@ function getFormVals(isEdit) {
 async function doSaveAdd() {
   const v = getFormVals(false);
   if (!v.firstName || !v.lastName || !v.startDate || !v.endDate) { showFlash('Fill all required fields.', 'danger'); return; }
+  if (!v.phone) { showFlash('Phone number is required.', 'danger'); return; }
   try {
     const newA = await apiFetch('/api/attachees', { method: 'POST', body: v });
     DB.attachees.push(newA);
@@ -1442,6 +1495,7 @@ async function openEdit(id) {
 async function doSaveEdit(id) {
   const v = getFormVals(true);
   if (!v.firstName || !v.lastName) { showFlash('Name required.', 'danger'); return; }
+  if (!v.phone) { showFlash('Phone number is required.', 'danger'); return; }
   const oldStatus = DB.attachees.find(a => a.id === id)?.status;
   try {
     const updated = await apiFetch(`/api/attachees/${id}`, { method: 'PUT', body: v });
@@ -1513,7 +1567,6 @@ async function confirmStatus(id) {
       departmentId: a.department_id || a.departmentId,
       institutionId:a.institution_id|| a.institutionId,
       supervisorId: a.supervisor_id || a.supervisorId,
-      idNumber:     a.id_number     || a.idNumber,
       regNo:        a.reg_no        || a.regNo,
       yearOfStudy:  a.year_of_study || a.yearOfStudy,
     };
@@ -1584,38 +1637,80 @@ async function doSaveEval() {
   } catch (e) { showFlash(e.message, 'danger'); }
 }
 
-// ─── DOCUMENTS ────────────────────────────────────────────────────────────────
+// ─── DOCUMENTS (UPLOAD) ────────────────────────────────────────────────────────
 function openAddDoc(id) {
   currentId = id;
+  pendingUploadFiles = [];
   const a = DB.attachees.find(x => x.id === id);
-  document.getElementById('docPageTitle').textContent = `Record Document — ${fullName(a)}`;
+  document.getElementById('docPageTitle').textContent = `Upload Document — ${fullName(a)}`;
   const types = ['Acceptance Letter','Introduction Letter','Completion Certificate','Insurance','ID Copy','Transcript','Report','Other'];
   document.getElementById('docFormWrap').innerHTML = `
     <div class="form-grid">
       <div class="form-group"><label>Document Type</label><select id="d_tp">${types.map(t => `<option>${t}</option>`).join('')}</select></div>
-      <div class="form-group"><label>File Name <span class="req">*</span></label><input id="d_fn" placeholder="e.g. john_intro_letter.pdf"></div>
-      <div class="form-group"><label>Issued Date</label><input type="date" id="d_dt" value="${todayStr()}"></div>
+      <div class="form-group"><label>Date</label><input type="date" id="d_dt" value="${todayStr()}"></div>
     </div>
-    <div class="form-group" style="margin-top:12px"><label>Notes</label><textarea id="d_nt" rows="2"></textarea></div>
+    <div class="form-group" style="margin-top:14px">
+      <label>Upload File <span class="req">*</span></label>
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="d_file" multiple onchange="handleFileSelect(this.files)">
+        <span class="upload-icon">&#128193;</span>
+        <div class="upload-text"><strong>Click to browse</strong> or drag &amp; drop files here</div>
+        <div class="upload-text" style="margin-top:4px;font-size:11px">PDF, Word, Excel, or image files</div>
+      </div>
+      <div class="file-list" id="pendingFileList"></div>
+    </div>
+    <div class="form-group" style="margin-top:12px"><label>Notes</label><textarea id="d_nt" rows="2" placeholder="Optional notes about this document…"></textarea></div>
     <div class="btn-group" style="margin-top:16px">
-      <button class="btn btn-primary" onclick="doSaveDoc()">Record Document</button>
+      <button class="btn btn-primary" onclick="doSaveDoc()">&#8593; Upload Document</button>
       <button class="btn btn-ghost" onclick="openDetail(${id})">Cancel</button>
     </div>`;
   showPage('add-doc');
+
+  const zone = document.getElementById('uploadZone');
+  ['dragenter','dragover'].forEach(evt => zone.addEventListener(evt, e => { e.preventDefault(); zone.classList.add('drag-over'); }));
+  ['dragleave','drop'].forEach(evt => zone.addEventListener(evt, e => { e.preventDefault(); zone.classList.remove('drag-over'); }));
+  zone.addEventListener('drop', e => { handleFileSelect(e.dataTransfer.files); });
+}
+
+function handleFileSelect(fileList) {
+  Array.from(fileList).forEach(f => pendingUploadFiles.push(f));
+  renderPendingFiles();
+}
+
+function removePendingFile(idx) {
+  pendingUploadFiles.splice(idx, 1);
+  renderPendingFiles();
+}
+
+function renderPendingFiles() {
+  const wrap = document.getElementById('pendingFileList');
+  if (!wrap) return;
+  wrap.innerHTML = pendingUploadFiles.map((f, i) => `
+    <div class="file-item">
+      <span class="file-icon">${fileIcon(f.name)}</span>
+      <div class="file-info">
+        <div class="file-name">${f.name}</div>
+        <div class="file-meta">${fileSizeStr(f.size)}</div>
+      </div>
+      <span class="file-status new">New</span>
+      <button class="file-remove" onclick="removePendingFile(${i})" title="Remove">&#215;</button>
+    </div>`).join('');
 }
 
 async function doSaveDoc() {
-  const id   = currentId;
-  const name = document.getElementById('d_fn').value.trim();
-  if (!name) { showFlash('File name is required.', 'danger'); return; }
+  const id = currentId;
+  if (!pendingUploadFiles.length) { showFlash('Please select at least one file to upload.', 'danger'); return; }
   try {
-    await apiFetch(`/api/attachees/${id}/documents`, { method: 'POST', body: {
-      docType:    document.getElementById('d_tp').value,
-      fileName:   name,
-      issuedDate: document.getElementById('d_dt').value,
-      notes:      document.getElementById('d_nt').value,
-    }});
-    showFlash('Document recorded.');
+    for (const f of pendingUploadFiles) {
+      await apiFetch(`/api/attachees/${id}/documents`, { method: 'POST', body: {
+        docType:    document.getElementById('d_tp').value,
+        fileName:   f.name,
+        issuedDate: document.getElementById('d_dt').value,
+        notes:      document.getElementById('d_nt').value,
+      }});
+    }
+    pendingUploadFiles = [];
+    showFlash('Document(s) uploaded.');
     openDetail(id);
   } catch (e) { showFlash(e.message, 'danger'); }
 }
