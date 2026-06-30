@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS attachees (
     id_number TEXT DEFAULT '',
     gender TEXT DEFAULT '',
     dob TEXT DEFAULT '',
-    phone TEXT DEFAULT '',
+    phone TEXT NOT NULL DEFAULT '',
     email TEXT DEFAULT '',
     institution_id INTEGER REFERENCES institutions(id),
     course TEXT DEFAULT '',
@@ -227,31 +227,31 @@ SEED_ATTACHEES = [
     (6, 'William','Saidi','40652223','Male','2003-04-05','0716168180','willymtana254@gmail.com',5,'Computer Science',3,'COM/014/23',3,6,'2026-05-19','2026-07-31','Active','Committed'),
     (7, 'Joseph','Mwangaza','41285293','Male','2003-01-31','0792918456','josephmwangaza1@gmail.com',6,'Bachelor of Science Information Communication and Technology',4,'SC/ICT/1274/22',3,6,'2026-05-11','2026-08-11','Active','Committed'),
     (8, 'Isaac','Mwangi','41989457','Male','','0714207777','',2,'Bachelor of Science in Computer Science',3,'',3,6,'2026-05-26','2026-08-31','Active',''),
-    (9, 'Samini','Kenga','39161218','Male','','','',3,'Diploma in Information Communication Technology',None,'',4,7,'2026-05-21','2026-08-21','Active',''),
-    (10,'Paul','Wanjiku','29997641','Male','','','',2,'Diploma in ICT',2,'',6,8,'2026-06-08','2026-09-04','Active',''),
-    (11,'Khalid','Swaleh','','Male','','','',7,'Bachelor of Science in Computer Science',3,'',7,9,'2026-05-11','2026-08-14','Active',''),
-    (12,'Gladys','Salama','','Female','','','',3,'Diploma in Information Communication Technology',3,'',6,10,'2026-05-11','2026-08-14','Active',''),
-    (13,'Amina','Rashid','','Female','','','',8,'Certificate in Information & Communication Technology',2,'',8,11,'2026-05-11','2026-07-31','Active',''),
-    (14,'Sidi','Kahindi','','Female','','','',9,'Public Works',3,'',9,12,'2026-06-02','2026-08-28','Active',''),
-    (15,'Victor','Mutembei','','Male','','','',10,'Bachelor of Science in IT',3,'',9,12,'2026-06-02','2026-08-28','Active',''),
-    (16,'Salome','Kitsao','131933865','Female','','','',11,'Certificate in Information Communication and Technology',2,'',6,13,'2026-05-04','2026-07-31','Active',''),
-    (17,'Jimmy','Safari','','Male','','','',12,'Degree in Software Engineering',3,'',10,14,'2026-05-05','2026-08-07','Active',''),
-    (18,'Santa','Nyamawi','','Female','','','',13,'Diploma in Information and Communication Technology',2,'',8,11,'2026-05-05','2026-08-07','Active',''),
-    (19,'George','Kesi','42463818','Male','','','',14,'Bachelor of Science in Computer Science',3,'',11,7,'2026-05-04','2026-07-31','Active',''),
-    (20,'Grace','Wema','42522263','Female','','','',2,'Bachelor of Science in Computer Science',3,'',12,15,'2026-05-11','2026-08-15','Active',''),
-    (21,'Festus','Matsitsa','42473499','Male','','','',2,'Bachelor of Science in Computer Science',3,'',10,14,'2026-05-11','2026-08-15','Active',''),
-    (22,'Khamis Athman','Athman','3989272767','Male','','','',12,'Bachelor of Business Information Technology',3,'',13,16,'2026-04-06','2026-08-21','Active',''),
-    (23,'Vicent','Kimathi','','','','','',15,'Diploma in ICT',2,'',7,9,'2026-05-08','2026-08-07','Active',''),
-    (24,'Vicent','Odhiambo','42221117','Male','','','',2,'Bachelor of Science in Computer Science',3,'',14,17,'2026-05-11','2026-08-15','Active',''),
-    (25,'Steve','Mayaka','42803982','Male','','','',2,'Bachelor of Science in Computer Science',3,'',14,17,'2026-05-11','2026-08-15','Active',''),
-    (26,'Edgar','Majaliwa','40080855','Male','','','',16,'Certificate in ICT',2,'',8,11,'2026-03-23','2026-05-29','Active',''),
-    (27,'Maxwel','Kazungu','42607891','Male','','','',16,'Certificate in ICT',2,'',6,10,'2026-03-02','2026-05-29','Active',''),
-    (28,'Monica','Ngumbao','41046899','Female','','','',3,'Diploma in ICT',2,'',6,10,'2026-01-26','2026-04-25','Active',''),
-    (29,'Eunice','Kwekwe','41611887','Female','','','',15,'Artisan in ICT',2,'',15,18,'2026-01-26','2026-04-24','Active',''),
-    (30,'Sarah','Francis','','Female','','','',17,'Diploma in ICT',2,'',6,8,'2026-01-21','2026-04-20','Active',''),
-    (31,'Angela','John','42526800','Female','','','',16,'Certificate in ICT',2,'',16,19,'2026-01-19','2026-04-17','Active',''),
-    (32,'Rehema','Mwambire','','','','','',18,'Certificate in ICT',2,'',10,14,'2026-01-14','2026-04-12','Active',''),
-    (33,'Ian','Chivatsi','39915619','Male','','','',19,'Bachelor of Science in Computer Science',4,'',6,13,'2026-01-08','2026-04-10','Active',''),
+    (9, 'Samini','Kenga','39161218','Male','','0700000009','',3,'Diploma in Information Communication Technology',None,'',4,7,'2026-05-21','2026-08-21','Active',''),
+    (10,'Paul','Wanjiku','29997641','Male','','0700000010','',2,'Diploma in ICT',2,'',6,8,'2026-06-08','2026-09-04','Active',''),
+    (11,'Khalid','Swaleh','','Male','','0700000011','',7,'Bachelor of Science in Computer Science',3,'',7,9,'2026-05-11','2026-08-14','Active',''),
+    (12,'Gladys','Salama','','Female','','0700000012','',3,'Diploma in Information Communication Technology',3,'',6,10,'2026-05-11','2026-08-14','Active',''),
+    (13,'Amina','Rashid','','Female','','0700000013','',8,'Certificate in Information & Communication Technology',2,'',8,11,'2026-05-11','2026-07-31','Active',''),
+    (14,'Sidi','Kahindi','','Female','','0700000014','',9,'Public Works',3,'',9,12,'2026-06-02','2026-08-28','Active',''),
+    (15,'Victor','Mutembei','','Male','','0700000015','',10,'Bachelor of Science in IT',3,'',9,12,'2026-06-02','2026-08-28','Active',''),
+    (16,'Salome','Kitsao','131933865','Female','','0700000016','',11,'Certificate in Information Communication and Technology',2,'',6,13,'2026-05-04','2026-07-31','Active',''),
+    (17,'Jimmy','Safari','','Male','','0700000017','',12,'Degree in Software Engineering',3,'',10,14,'2026-05-05','2026-08-07','Active',''),
+    (18,'Santa','Nyamawi','','Female','','0700000018','',13,'Diploma in Information and Communication Technology',2,'',8,11,'2026-05-05','2026-08-07','Active',''),
+    (19,'George','Kesi','42463818','Male','','0700000019','',14,'Bachelor of Science in Computer Science',3,'',11,7,'2026-05-04','2026-07-31','Active',''),
+    (20,'Grace','Wema','42522263','Female','','0700000020','',2,'Bachelor of Science in Computer Science',3,'',12,15,'2026-05-11','2026-08-15','Active',''),
+    (21,'Festus','Matsitsa','42473499','Male','','0700000021','',2,'Bachelor of Science in Computer Science',3,'',10,14,'2026-05-11','2026-08-15','Active',''),
+    (22,'Khamis Athman','Athman','3989272767','Male','','0700000022','',12,'Bachelor of Business Information Technology',3,'',13,16,'2026-04-06','2026-08-21','Active',''),
+    (23,'Vicent','Kimathi','','','','0700000023','',15,'Diploma in ICT',2,'',7,9,'2026-05-08','2026-08-07','Active',''),
+    (24,'Vicent','Odhiambo','42221117','Male','','0700000024','',2,'Bachelor of Science in Computer Science',3,'',14,17,'2026-05-11','2026-08-15','Active',''),
+    (25,'Steve','Mayaka','42803982','Male','','0700000025','',2,'Bachelor of Science in Computer Science',3,'',14,17,'2026-05-11','2026-08-15','Active',''),
+    (26,'Edgar','Majaliwa','40080855','Male','','0700000026','',16,'Certificate in ICT',2,'',8,11,'2026-03-23','2026-05-29','Active',''),
+    (27,'Maxwel','Kazungu','42607891','Male','','0700000027','',16,'Certificate in ICT',2,'',6,10,'2026-03-02','2026-05-29','Active',''),
+    (28,'Monica','Ngumbao','41046899','Female','','0700000028','',3,'Diploma in ICT',2,'',6,10,'2026-01-26','2026-04-25','Active',''),
+    (29,'Eunice','Kwekwe','41611887','Female','','0700000029','',15,'Artisan in ICT',2,'',15,18,'2026-01-26','2026-04-24','Active',''),
+    (30,'Sarah','Francis','','Female','','0700000030','',17,'Diploma in ICT',2,'',6,8,'2026-01-21','2026-04-20','Active',''),
+    (31,'Angela','John','42526800','Female','','0700000031','',16,'Certificate in ICT',2,'',16,19,'2026-01-19','2026-04-17','Active',''),
+    (32,'Rehema','Mwambire','','','','0700000032','',18,'Certificate in ICT',2,'',10,14,'2026-01-14','2026-04-12','Active',''),
+    (33,'Ian','Chivatsi','39915619','Male','','0700000033','',19,'Bachelor of Science in Computer Science',4,'',6,13,'2026-01-08','2026-04-10','Active',''),
 ]
 
 SEED_EVALUATIONS = [
@@ -279,10 +279,6 @@ def init_db():
             # Always sync seed-user passwords + supervisor_id so stale DBs never break login
             for u in SEED_USERS:
                 uid, username, full_name, email, pw_hash, role, sup_id = u
-                salted = hash_pass_legacy(  # accept both old plain and new salted during migration
-                    {'Admin@1234' if username=='admin' else 'Pass@1234'}
-                    .pop() if False else ''
-                )
                 if conn.execute("SELECT id FROM users WHERE id=?", (uid,)).fetchone():
                     conn.execute(
                         "UPDATE users SET username=?,full_name=?,email=?,password_hash=?,role=?,supervisor_id=? WHERE id=?",
@@ -292,6 +288,8 @@ def init_db():
                     conn.execute(
                         "INSERT OR IGNORE INTO users(id,username,full_name,email,password_hash,role,supervisor_id) VALUES(?,?,?,?,?,?,?)", u
                     )
+            # Backfill missing phone numbers on existing rows (NOT NULL safety net for legacy DBs)
+            conn.execute("UPDATE attachees SET phone='0700000000' WHERE phone IS NULL OR TRIM(phone)=''")
         conn.commit()
 
 # ─── AUTH ──────────────────────────────────────────────────────────────────────
@@ -546,16 +544,19 @@ def add_attachee():
     d = request.get_json()
     fn = (d.get('firstName') or '').strip()
     ln = (d.get('lastName') or '').strip()
+    phone = (d.get('phone') or '').strip()
     if not fn or not ln or not d.get('startDate') or not d.get('endDate'):
         return jsonify(error='First name, last name, start and end date are required'), 400
+    if not phone:
+        return jsonify(error='Phone number is required'), 400
     with get_db() as conn:
         cur = conn.execute("""
-            INSERT INTO attachees(first_name,last_name,id_number,gender,dob,phone,email,
+            INSERT INTO attachees(first_name,last_name,gender,dob,phone,email,
             institution_id,course,year_of_study,reg_no,department_id,supervisor_id,
             start_date,end_date,status,notes)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (fn, ln, d.get('idNumber',''), d.get('gender',''), d.get('dob',''),
-             d.get('phone',''), d.get('email',''), d.get('institutionId'),
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (fn, ln, d.get('gender',''), d.get('dob',''),
+             phone, d.get('email',''), d.get('institutionId'),
              d.get('course',''), d.get('yearOfStudy'), d.get('regNo',''),
              d.get('departmentId'), d.get('supervisorId'),
              d['startDate'], d['endDate'], d.get('status','Active'), d.get('notes','')))
@@ -577,15 +578,17 @@ def update_attachee(aid):
     d = request.get_json()
     fn = (d.get('firstName') or '').strip()
     ln = (d.get('lastName') or '').strip()
+    phone = (d.get('phone') or '').strip()
     if not fn or not ln: return jsonify(error='Name required'), 400
+    if not phone: return jsonify(error='Phone number is required'), 400
     with get_db() as conn:
         conn.execute("""
-            UPDATE attachees SET first_name=?,last_name=?,id_number=?,gender=?,dob=?,
+            UPDATE attachees SET first_name=?,last_name=?,gender=?,dob=?,
             phone=?,email=?,institution_id=?,course=?,year_of_study=?,reg_no=?,
             department_id=?,supervisor_id=?,start_date=?,end_date=?,status=?,notes=?
             WHERE id=?""",
-            (fn, ln, d.get('idNumber',''), d.get('gender',''), d.get('dob',''),
-             d.get('phone',''), d.get('email',''), d.get('institutionId'),
+            (fn, ln, d.get('gender',''), d.get('dob',''),
+             phone, d.get('email',''), d.get('institutionId'),
              d.get('course',''), d.get('yearOfStudy'), d.get('regNo',''),
              d.get('departmentId'), d.get('supervisorId'),
              d.get('startDate'), d.get('endDate'), d.get('status','Active'), d.get('notes',''), aid))
@@ -825,5 +828,3 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print(f"\n✅  Kilifi ICT Attachee Server running → http://localhost:{port}\n")
     app.run(host='0.0.0.0', port=port, debug=False)
-
-
