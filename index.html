@@ -1,394 +1,951 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kilifi County ICT Attachee Tracking System</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kilifi County ICT Attachee Tracking System</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --navy:#1a3c5e;--blue:#2563a8;--blue-light:#dbeafe;--blue-mid:#93c5fd;
-  --green:#16a34a;--green-light:#dcfce7;--green-mid:#86efac;
-  --amber:#d97706;--amber-light:#fef3c7;
-  --red:#dc2626;--red-light:#fee2e2;
-  --gray:#64748b;--gray-light:#f1f5f9;--gray-mid:#e2e8f0;
-  --text:#1e293b;--white:#fff;
+/* ═══════════════════════════════════════════════════════════════
+   Kilifi County ICT Attachee Tracking System — styles.css
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── RESET & VARIABLES ─────────────────────────────────────────────────────── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --navy:        #1a3c5e;
+  --blue:        #0d17d9;
+  --blue-light:  #dbeafe;
+  --blue-mid:    #93c5fd;
+  --green:       #16a34a;
+  --green-light: #dcfce7;
+  --green-mid:   #86efac;
+  --amber:       #d97706;
+  --amber-light: #fef3c7;
+  --red:         #dc2626;
+  --red-light:   #fee2e2;
+  --gray:        #64748b;
+  --gray-light:  #f1f5f9;
+  --gray-mid:    #e2e8f0;
+  --text:        #1e293b;
+  --white:       #fff;
+  --sidebar-w:   240px;
 }
-body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray-light);color:var(--text);min-height:100vh}
-a{color:var(--blue)}
-button,input,select,textarea{font-family:inherit}
-nav{background:var(--navy);color:#fff;padding:0 24px;display:flex;align-items:center;height:56px;position:sticky;top:0;z-index:200;box-shadow:0 2px 8px rgba(0,0,0,.25);gap:8px;flex-wrap:wrap}
-.nav-brand{font-size:17px;font-weight:700;color:#fff;margin-right:16px;white-space:nowrap}
-.nav-brand span{color:#38bdf8}
-.nav-links{display:flex;gap:2px;flex:1;flex-wrap:wrap}
-.nav-links button{background:transparent;border:none;color:#cbd5e1;padding:6px 11px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:500;transition:all .15s}
-.nav-links button:hover,.nav-links button.active{background:#2563a8;color:#fff}
-.nav-user{font-size:12px;color:#94a3b8;display:flex;align-items:center;gap:8px;white-space:nowrap}
-.role-badge{background:#0ea5e9;color:#fff;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:700;text-transform:uppercase}
-.nav-user button{background:transparent;border:1px solid #ef4444;color:#f87171;padding:3px 9px;border-radius:5px;font-size:11px;cursor:pointer}
-.nav-user button:hover{background:#ef4444;color:#fff}
-.container{max-width:1200px;margin:0 auto;padding:22px 16px}
-.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap}
-.page-title{font-size:20px;font-weight:700;color:var(--navy)}
-.card{background:var(--white);border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:20px;margin-bottom:18px}
-.card-title{font-size:12px;font-weight:700;color:var(--navy);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--gray-mid);text-transform:uppercase;letter-spacing:.5px}
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
-.stat-card{background:var(--white);border-radius:10px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.08);border-left:4px solid var(--blue)}
-.stat-card.green{border-color:var(--green)}.stat-card.amber{border-color:var(--amber)}.stat-card.red{border-color:var(--red)}
-.stat-num{font-size:32px;font-weight:800;color:var(--navy);line-height:1}
-.stat-label{font-size:11px;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-top:4px}
-.table-wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th{background:var(--navy);color:#fff;padding:9px 11px;text-align:left;font-weight:600;white-space:nowrap;font-size:11.5px;letter-spacing:.3px}
-td{padding:8px 11px;border-bottom:1px solid var(--gray-mid);vertical-align:middle}
-tr:hover td{background:#f8fafc}
-tr:last-child td{border-bottom:none}
-.badge{display:inline-block;padding:2px 8px;border-radius:9px;font-size:11px;font-weight:700;text-transform:uppercase}
-.badge-green{background:var(--green-light);color:#15803d}
-.badge-blue{background:var(--blue-light);color:#1d4ed8}
-.badge-amber{background:var(--amber-light);color:#92400e}
-.badge-red{background:var(--red-light);color:#991b1b}
-.badge-gray{background:var(--gray-mid);color:#475569}
-.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 15px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;white-space:nowrap}
-.btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:#1d4ed8}
-.btn-success{background:var(--green);color:#fff}.btn-success:hover{background:#15803d}
-.btn-danger{background:var(--red);color:#fff}.btn-danger:hover{background:#b91c1c}
-.btn-warning{background:var(--amber);color:#fff}.btn-warning:hover{background:#b45309}
-.btn-outline{background:#fff;color:var(--blue);border:1.5px solid var(--blue)}.btn-outline:hover{background:var(--blue-light)}
-.btn-ghost{background:transparent;color:var(--gray);border:1.5px solid var(--gray-mid)}.btn-ghost:hover{background:var(--gray-light)}
-.btn-sm{padding:4px 10px;font-size:12px;border-radius:5px}
-.btn-group{display:flex;gap:6px;flex-wrap:wrap}
-button:disabled{opacity:.5;cursor:not-allowed}
-.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
-.form-group{display:flex;flex-direction:column;gap:4px}
-label{font-size:12.5px;font-weight:600;color:#374151}
-.req{color:var(--red)}
-input,select,textarea{padding:8px 11px;border:1.5px solid var(--gray-mid);border-radius:6px;font-size:13.5px;transition:border .15s;width:100%;background:#fff;color:var(--text)}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-light)}
-input[type=range]{padding:0;border:none;box-shadow:none;accent-color:var(--blue)}
-textarea{resize:vertical;min-height:78px}
-.form-section-hd{font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.6px;margin:16px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--gray-mid)}
-.flash{padding:11px 15px;border-radius:8px;margin-bottom:12px;font-size:13.5px;display:flex;align-items:center;gap:10px;font-weight:500}
-.flash-success{background:var(--green-light);color:#15803d;border:1px solid var(--green-mid)}
-.flash-danger{background:var(--red-light);color:#991b1b;border:1px solid #fecaca}
-.flash-warning{background:var(--amber-light);color:#92400e;border:1px solid #fde68a}
-.flash-info{background:var(--blue-light);color:#1e40af;border:1px solid var(--blue-mid)}
-.flash button{margin-left:auto;background:transparent;border:none;font-size:17px;cursor:pointer;opacity:.5;line-height:1}
-.info-row{display:flex;padding:6px 0;border-bottom:1px solid var(--gray-light);font-size:13px;gap:10px}
-.info-row:last-child{border-bottom:none}
-.info-label{font-weight:600;color:var(--gray);min-width:140px;flex-shrink:0;font-size:12.5px}
-.score-bar{background:var(--gray-mid);border-radius:4px;height:7px;overflow:hidden;width:80px;display:inline-block;vertical-align:middle}
-.score-fill{height:100%;border-radius:4px}
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px}
-.modal{background:#fff;border-radius:12px;padding:26px 24px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.18)}
-.modal-title{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
-.modal-close{background:transparent;border:none;font-size:21px;color:var(--gray);cursor:pointer;line-height:1}
-.filter-bar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
-.filter-bar input,.filter-bar select{width:auto;flex:1;min-width:130px;padding:7px 10px;font-size:13px}
-.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-@media(max-width:680px){.detail-grid{grid-template-columns:1fr}}
-.days-urgent{color:var(--red);font-weight:700}
-.days-warn{color:var(--amber);font-weight:700}
-.days-ok{color:var(--green)}
-.report-box{background:#f8faff;border:1px solid var(--blue-mid);border-radius:8px;padding:16px;font-size:13px;line-height:1.75;white-space:pre-wrap;color:#1e293b;font-family:'Courier New',monospace;margin-top:10px;max-height:360px;overflow-y:auto}
-.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a3c5e 0%,#2563a8 100%)}
-.login-card{background:#fff;border-radius:14px;padding:34px 30px;width:100%;max-width:370px;box-shadow:0 8px 40px rgba(0,0,0,.2)}
-.login-logo{text-align:center;margin-bottom:20px}
-.login-logo h1{font-size:22px;font-weight:800;color:var(--navy)}
-.login-logo p{font-size:12px;color:var(--gray);margin-top:3px}
-.empty{text-align:center;padding:30px 20px;color:var(--gray);font-size:13.5px}
-.av{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;flex-shrink:0}
-.eval-card{border:1px solid var(--gray-mid);border-radius:8px;padding:14px;margin-bottom:10px}
-.spinner{display:inline-block;width:18px;height:18px;border:2px solid #dbeafe;border-top-color:var(--blue);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle}
-@keyframes spin{to{transform:rotate(360deg)}}
-.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.7);z-index:900;display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--navy);gap:10px}
+
+/* ─── BASE ──────────────────────────────────────────────────────────────────── */
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--gray-light);
+  color: var(--text);
+  min-height: 100vh;
+}
+a { color: var(--blue); }
+button, input, select, textarea { font-family: inherit; }
+
+/* ─── SIDEBAR NAVIGATION ────────────────────────────────────────────────────── */
+.sidebar {
+  background: var(--navy);
+  color: #fff;
+  width: var(--sidebar-w);
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 200;
+  box-shadow: 2px 0 8px rgba(0,0,0,.25);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.sidebar-brand {
+  font-size: 16px;                                                                          
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 18px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.12);
+}
+.sidebar-logo {
+  width: 34px;                                                                                                                            
+  height: 34px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,.3));
+}
+.sidebar-brand-text { display: flex; flex-direction: column; line-height: 1.25; }
+.sidebar-brand-text .sub { font-size: 11px; color: #94a3b8; font-weight: 500; }
+.sidebar-brand span { color: #38bdf8; }
+
+.sidebar-links {
+  flex: 1;                             
+  padding: 14px 10px;             
+  display: flex;                                                                                                                                                                          
+  flex-direction: column;                         
+  gap: 2px;
+  overflow-y: auto;
+}                              
+.sidebar-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .7px;
+  text-transform: uppercase;
+  color: #5b7896;
+  padding: 14px 12px 6px;
+}
+.sidebar-label:first-child { padding-top: 4px; }
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: #cbd5e1;
+  font-size: 13.5px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all .15s;
+  text-align: left;
+}
+.sidebar-item:hover { background: rgba(255,255,255,.08); color: #fff; }
+.sidebar-item.active { background: #2563a8; color: #fff; }
+.sidebar-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+.sidebar-badge {
+  margin-left: auto;
+  background: var(--red);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 10px;
+}
+
+.sidebar-divider { height: 1px; background: rgba(255,255,255,.1); margin: 8px 12px; }
+
+.sidebar-add-btn {
+  margin: 8px 10px 4px;
+  background: var(--blue);
+  border: none;
+  color: #fff;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background .15s;
+}
+.sidebar-add-btn:hover { background: #1d4ed8; }
+
+.sidebar-footer {
+  padding: 14px 12px;
+  border-top: 1px solid rgba(255,255,255,.12);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sidebar-av {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #0ea5e9;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.sidebar-user-info { flex: 1; min-width: 0; }
+.sidebar-user-info .name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-user-info .role {
+  font-size: 10.5px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+.sidebar-footer-actions { display: flex; gap: 4px; }
+.sidebar-icon-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s;
+}
+.sidebar-icon-btn:hover { background: rgba(255,255,255,.1); color: #fff; }
+.sidebar-icon-btn.danger:hover { background: #ef4444; color: #fff; }
+
+/* ─── LAYOUT ────────────────────────────────────────────────────────────────── */
+.main-content {
+  margin-left: var(--sidebar-w);
+  min-height: 100vh;
+}
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 22px 16px;
+}
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.page-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+@media (max-width: 880px) {
+  .sidebar { width: 220px; }
+  .main-content { margin-left: 220px; }
+}
+@media (max-width: 680px) {
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: static;
+    flex-direction: row;
+    align-items: center;
+    overflow-x: auto;
+  }
+  .sidebar-links { flex-direction: row; padding: 6px; }
+  .sidebar-label, .sidebar-divider, .sidebar-footer { display: none; }
+  .sidebar-add-btn { display: none; }
+  .main-content { margin-left: 0; }
+}
+
+/* ─── CARDS ─────────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--white);
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.08);
+  padding: 20px;
+  margin-bottom: 18px;
+}
+.card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--gray-mid);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+/* ─── STATS ─────────────────────────────────────────────────────────────────── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.stat-card {
+  background: var(--white);
+  border-radius: 10px;
+  padding: 16px 18px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.08);
+  border-left: 4px solid var(--blue);
+}
+.stat-card.green  { border-color: var(--green); }
+.stat-card.amber  { border-color: var(--amber); }
+.stat-card.red    { border-color: var(--red); }
+.stat-num {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--navy);
+  line-height: 1;
+}
+.stat-label {
+  font-size: 11px;
+  color: var(--gray);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-top: 4px;
+}
+
+/* ─── TABLES ────────────────────────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th {
+  background: var(--navy);
+  color: #fff;
+  padding: 9px 11px;
+  text-align: left;
+  font-weight: 600;
+  white-space: nowrap;
+  font-size: 11.5px;
+  letter-spacing: .3px;
+}
+td {
+  padding: 8px 11px;
+  border-bottom: 1px solid var(--gray-mid);
+  vertical-align: middle;
+}
+tr:hover td { background: #f8fafc; }
+tr:last-child td { border-bottom: none; }
+
+/* ─── BADGES ────────────────────────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.badge-green  { background: var(--green-light); color: #15803d; }
+.badge-blue   { background: var(--blue-light);  color: #1d4ed8; }
+.badge-amber  { background: var(--amber-light); color: #92400e; }
+.badge-red    { background: var(--red-light);   color: #991b1b; }
+.badge-gray   { background: var(--gray-mid);    color: #475569; }
+
+/* ─── BUTTONS ───────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 15px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.btn-primary  { background: var(--blue);  color: #fff; }
+.btn-primary:hover  { background: #1d4ed8; }
+.btn-success  { background: var(--green); color: #fff; }
+.btn-success:hover  { background: #15803d; }
+.btn-danger   { background: var(--red);   color: #fff; }
+.btn-danger:hover   { background: #b91c1c; }
+.btn-warning  { background: var(--amber); color: #fff; }
+.btn-warning:hover  { background: #b45309; }
+.btn-outline  { background: #fff; color: var(--blue); border: 1.5px solid var(--blue); }
+.btn-outline:hover  { background: var(--blue-light); }
+.btn-ghost    { background: transparent; color: var(--gray); border: 1.5px solid var(--gray-mid); }
+.btn-ghost:hover    { background: var(--gray-light); }
+.btn-sm { padding: 4px 10px; font-size: 12px; border-radius: 5px; }
+.btn-group { display: flex; gap: 6px; flex-wrap: wrap; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ─── FORMS ─────────────────────────────────────────────────────────────────── */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+label { font-size: 12.5px; font-weight: 600; color: #374151; }
+.req { color: var(--red); }
+input, select, textarea {
+  padding: 8px 11px;
+  border: 1.5px solid var(--gray-mid);
+  border-radius: 6px;
+  font-size: 13.5px;
+  transition: border .15s;
+  width: 100%;
+  background: #fff;
+  color: var(--text);
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px var(--blue-light);
+}
+input[type=range] { padding: 0; border: none; box-shadow: none; accent-color: var(--blue); }
+textarea { resize: vertical; min-height: 78px; }
+.form-section-hd {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gray);
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  margin: 16px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--gray-mid);
+}
+
+/* ─── FLASH MESSAGES ────────────────────────────────────────────────────────── */
+.flash {
+  padding: 11px 15px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 13.5px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+}
+.flash-success { background: var(--green-light); color: #15803d;  border: 1px solid var(--green-mid); }
+.flash-danger  { background: var(--red-light);   color: #991b1b;  border: 1px solid #fecaca; }
+.flash-warning { background: var(--amber-light); color: #92400e;  border: 1px solid #fde68a; }
+.flash-info    { background: var(--blue-light);  color: #1e40af;  border: 1px solid var(--blue-mid); }
+.flash button {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  font-size: 17px;
+  cursor: pointer;
+  opacity: .5;
+  line-height: 1;
+}
+
+/* ─── INFO ROWS ─────────────────────────────────────────────────────────────── */
+.info-row {
+  display: flex;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--gray-light);
+  font-size: 13px;
+  gap: 10px;
+}
+.info-row:last-child { border-bottom: none; }
+.info-label {
+  font-weight: 600;
+  color: var(--gray);
+  min-width: 140px;
+  flex-shrink: 0;
+  font-size: 12.5px;
+}
+
+/* ─── SCORE BAR ─────────────────────────────────────────────────────────────── */
+.score-bar {
+  background: var(--gray-mid);
+  border-radius: 4px;
+  height: 7px;
+  overflow: hidden;
+  width: 80px;
+  display: inline-block;
+  vertical-align: middle;
+}
+.score-fill { height: 100%; border-radius: 4px; }
+
+/* ─── MODAL ─────────────────────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 26px 24px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 40px rgba(0,0,0,.18);
+}
+.modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-close {
+  background: transparent;
+  border: none;
+  font-size: 21px;
+  color: var(--gray);
+  cursor: pointer;
+  line-height: 1;
+}
+
+/* ─── FILTER BAR ────────────────────────────────────────────────────────────── */
+.filter-bar {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.filter-bar input,
+.filter-bar select {
+  width: auto;
+  flex: 1;
+  min-width: 130px;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+
+/* ─── DETAIL GRID ───────────────────────────────────────────────────────────── */
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+@media (max-width: 680px) { .detail-grid { grid-template-columns: 1fr; } }
+
+/* ─── DAYS REMAINING ────────────────────────────────────────────────────────── */
+.days-urgent { color: var(--red);   font-weight: 700; }
+.days-warn   { color: var(--amber); font-weight: 700; }
+.days-ok     { color: var(--green); }
+
+/* ─── REPORT BOX ────────────────────────────────────────────────────────────── */
+.report-box {
+  background: #f8faff;
+  border: 1px solid var(--blue-mid);
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  color: #1e293b;
+  font-family: 'Courier New', monospace;
+  margin-top: 10px;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+/* ─── LOGIN PAGE ────────────────────────────────────────────────────────────── */
+.login-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1a3c5e 0%, #2563a8 100%);
+}
+.login-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 34px 30px;
+  width: 100%;
+  max-width: 370px;
+  box-shadow: 0 8px 40px rgba(0,0,0,.2);
+}
+.login-logo { text-align: center; margin-bottom: 20px; }
+.login-logo-img {
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 12px;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.15));
+}
+.login-logo h1 { font-size: 22px; font-weight: 800; color: var(--navy); }
+.login-logo p  { font-size: 12px; color: var(--gray); margin-top: 3px; }
+
+/* ─── MISC ──────────────────────────────────────────────────────────────────── */
+.empty {
+  text-align: center;
+  padding: 30px 20px;
+  color: var(--gray);
+  font-size: 13.5px;
+}
+.av {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 17px;
+  flex-shrink: 0;
+}
+.eval-card {
+  border: 1px solid var(--gray-mid);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+/* ─── SPINNER / LOADING ─────────────────────────────────────────────────────── */
+.spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #dbeafe;
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(255,255,255,.7);
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  color: var(--navy);
+  gap: 10px;
+}
 </style>
 </head>
 <body>
 
-<!-- LOGIN -->
+<!-- ═══════════════════════════ LOGIN PAGE ═══════════════════════════════════ -->
 <div id="loginPage">
-<div class="login-wrap">
-<div class="login-card">
-  <div class="login-logo">
-    <svg width="44" height="44" viewBox="0 0 44 44" style="margin:0 auto 10px;display:block">
-      <rect width="44" height="44" rx="10" fill="#1a3c5e"/>
-      <path d="M10 14h24M10 22h24M10 30h14" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round"/>
-    </svg>
-    <h1>Kilifi County ICT Attachees</h1>
-    <p>Attachee Tracking System v3.0</p>
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-logo">
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%231a3c5e'/%3E%3Ctext x='50' y='62' text-anchor='middle' font-size='36' font-family='Arial' font-weight='bold' fill='white'%3EKC%3C/text%3E%3C/svg%3E" alt="klf-logo.webp" class="login-logo-img">
+        <h1>Kilifi County ICT Attachees</h1>
+        <p>Attachee Tracking System v3.0</p>
+      </div>
+      <div id="loginFlash"></div>
+      <div class="form-group" style="margin-bottom:12px">
+        <label>Username</label>
+        <input type="text" id="loginUser" placeholder="Username" autocomplete="username">
+      </div>
+      <div class="form-group" style="margin-bottom:18px">
+        <label>Password</label>
+        <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary" id="loginBtn"
+        style="width:100%;justify-content:center;padding:11px"
+        onclick="doLogin()">Sign In</button>
+    </div>
   </div>
-  <div id="loginFlash"></div>
-  <div class="form-group" style="margin-bottom:12px">
-    <label>Username</label>
-    <input type="text" id="loginUser" placeholder="Username" autocomplete="username">
-  </div>
-  <div class="form-group" style="margin-bottom:18px">
-    <label>Password</label>
-    <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password">
-  </div>
-  <button class="btn btn-primary" id="loginBtn" style="width:100%;justify-content:center;padding:11px" onclick="doLogin()">Sign In</button>
-</div>
-</div>
 </div>
 
-<!-- APP -->
+<!-- ═══════════════════════════ MAIN APP ═════════════════════════════════════ -->
 <div id="app" style="display:none">
-<nav>
-  <div class="nav-brand">Kilifi County <span>ICT Attachees</span></div>
-  <div class="nav-links">
-    <button onclick="showPage('dashboard')" id="nb-dashboard">&#9632; Dashboard</button>
-    <button onclick="showPage('attachees')" id="nb-attachees">&#128100; Attachees</button>
-    <button onclick="showPage('supervisors')" id="nb-supervisors">&#128101; Supervisors</button>
-    <button onclick="showPage('institutions')" id="nb-institutions">&#127979; Institutions</button>
-    <button onclick="showPage('departments')" id="nb-departments">&#127970; Departments</button>
-    <button onclick="showPage('email-config')" id="nb-email-config">&#9993; Email Setup</button>
-    <span id="adminNav" style="display:none">
-      <button onclick="showPage('users')" id="nb-users">&#128273; Users</button>
-    </span>
-  </div>
-  <div class="nav-user">
-    <span id="navName"></span>
-    <span id="navRole" class="role-badge"></span>
-    <button onclick="showPage('profile')" style="background:transparent;border:1px solid #38bdf8;color:#38bdf8;padding:3px 9px;border-radius:5px;font-size:11px;cursor:pointer">&#128100; Profile</button>
-    <button onclick="doLogout()">Logout</button>
-  </div>
-</nav>
 
-<div class="container">
-  <div id="flashArea"></div>
-
-  <!-- DASHBOARD -->
-  <div id="page-dashboard" class="page" style="display:none">
-    <div class="page-header">
-      <div class="page-title">Dashboard</div>
-      <div class="btn-group">
-        <button class="btn btn-outline btn-sm" onclick="exportCSV()">&#8659; Export CSV</button>
-        <button class="btn btn-primary btn-sm" onclick="showPage('add-attachee')">+ Add Attachee</button>
+  <!-- ── LEFT SIDEBAR NAV ───────────────────────────────────────────────────── -->
+  <div class="sidebar">
+    <div class="sidebar-brand">
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23ffffff33'/%3E%3Ctext x='50' y='62' text-anchor='middle' font-size='36' font-family='Arial' font-weight='bold' fill='white'%3EKC%3C/text%3E%3C/svg%3E" alt="klf-logo.webp" class="sidebar-logo">
+      <div class="sidebar-brand-text">
+        <div>Kilifi County <span>ICT</span></div>
+        <div class="sub">Attachee Tracking v3</div>
       </div>
     </div>
-    <div class="stats-grid" id="dashStats"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;flex-wrap:wrap">
-      <div class="card"><div class="card-title">Department Summary</div><div id="deptSummary"></div></div>
-      <div class="card"><div class="card-title">&#9888; Ending Within 14 Days</div><div id="endingSoon"></div></div>
-    </div>
-    <div class="card"><div class="card-title">&#127942; Top Performers</div><div id="topPerformers"></div></div>
-    <div class="card"><div class="card-title">Recent Attachees</div><div id="recentList"></div></div>
-  </div>
 
-  <!-- ATTACHEES LIST -->
-  <div id="page-attachees" class="page" style="display:none">
-    <div class="page-header">
-      <div class="page-title" id="attacheeListTitle">Attachees</div>
-      <button class="btn btn-primary btn-sm" onclick="showPage('add-attachee')">+ Add Attachee</button>
+    <div class="sidebar-links">
+      <div class="sidebar-label">Main</div>
+      <button class="sidebar-item" id="ndi-dashboard" onclick="showPage('dashboard')">
+        <span class="sidebar-icon">&#128200;</span> Dashboard
+      </button>
+      <button class="sidebar-item" id="ndi-attachees" onclick="showPage('attachees')">
+        <span class="sidebar-icon">&#128100;</span> Attachees
+        <span class="sidebar-badge" id="attacheeCountBadge" style="display:none">0</span>
+      </button>
+      <button class="sidebar-item" id="ndi-supervisors" onclick="showPage('supervisors')">
+        <span class="sidebar-icon">&#128101;</span> Supervisors
+      </button>
+
+      <div class="sidebar-label">Setup</div>
+      <button class="sidebar-item" id="ndi-institutions" onclick="showPage('institutions')">
+        <span class="sidebar-icon">&#127979;</span> Institutions
+      </button>
+      <button class="sidebar-item" id="ndi-departments" onclick="showPage('departments')">
+        <span class="sidebar-icon">&#127970;</span> Departments
+      </button>
+      <button class="sidebar-item" id="ndi-email-config" onclick="showPage('email-config')">
+        <span class="sidebar-icon">&#9993;</span> Email Setup
+      </button>
+
+      <div class="sidebar-label" id="adminLabel" style="display:none">Admin</div>
+      <button class="sidebar-item" id="ndi-users" onclick="showPage('users')" style="display:none">
+        <span class="sidebar-icon">&#128273;</span> Users
+      </button>
+      <button class="sidebar-item" id="ndi-export" onclick="exportCSV()" style="display:none">
+        <span class="sidebar-icon">&#8659;</span> Export CSV
+      </button>
     </div>
-    <div class="filter-bar">
-      <input type="text" id="srchTerm" placeholder="&#128269; Search name, course, institution…" oninput="renderAttacheeList()">
-      <select id="srchStatus" onchange="renderAttacheeList()">
-        <option value="">All Statuses</option>
-        <option>Active</option><option>Completed</option><option>Terminated</option><option>Deferred</option>
-      </select>
-      <select id="srchDept" onchange="renderAttacheeList()">
-        <option value="">All Departments</option>
-      </select>
-    </div>
-    <div class="card" style="padding:0">
-      <div class="table-wrap">
-        <table><thead><tr><th>#</th><th>Name</th><th>Institution</th><th>Course</th><th>Department</th><th>Start</th><th>End</th><th>Days Left</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody id="attacheeBody"></tbody></table>
+
+    <button class="sidebar-add-btn" onclick="showPage('add-attachee')">
+      <span>&#43;</span> Add Attachee
+    </button>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-av" id="sbAvatar">U</div>
+      <div class="sidebar-user-info">
+        <div class="name" id="navName"></div>
+        <div class="role" id="navRole"></div>
+      </div>
+      <div class="sidebar-footer-actions">
+        <button class="sidebar-icon-btn" title="Change Password" onclick="openChangePasswordModal()">&#128273;</button>
+        <button class="sidebar-icon-btn danger" title="Logout" onclick="doLogout()">&#8650;</button>
       </div>
     </div>
   </div>
 
-  <!-- ATTACHEE DETAIL -->
-  <div id="page-attachee-detail" class="page" style="display:none">
-    <div class="page-header">
-      <button class="btn btn-ghost btn-sm" onclick="showPage('attachees')">&#8592; Back</button>
-      <div class="btn-group" id="detailBtns"></div>
-    </div>
-    <div id="detailContent"></div>
-  </div>
+  <div class="main-content">
+    <div class="container">
+      <div id="flashArea"></div>
 
-  <!-- ADD ATTACHEE -->
-  <div id="page-add-attachee" class="page" style="display:none">
-    <div class="page-header"><div class="page-title">Add New Attachee</div><button class="btn btn-ghost btn-sm" onclick="showPage('attachees')">&#8592; Cancel</button></div>
-    <div class="card"><div id="addAttacheeFormWrap"></div></div>
-  </div>
-
-  <!-- EDIT ATTACHEE -->
-  <div id="page-edit-attachee" class="page" style="display:none">
-    <div class="page-header"><div class="page-title">Edit Attachee</div><button class="btn btn-ghost btn-sm" onclick="openDetail(currentId)">&#8592; Cancel</button></div>
-    <div class="card"><div id="editAttacheeFormWrap"></div></div>
-  </div>
-
-  <!-- ADD EVAL -->
-  <div id="page-add-eval" class="page" style="display:none">
-    <div class="page-header"><div class="page-title" id="evalPageTitle">Add Evaluation</div><button class="btn btn-ghost btn-sm" onclick="openDetail(currentId)">&#8592; Cancel</button></div>
-    <div class="card"><div id="evalFormWrap"></div></div>
-  </div>
-
-  <!-- ADD DOC -->
-  <div id="page-add-doc" class="page" style="display:none">
-    <div class="page-header"><div class="page-title" id="docPageTitle">Record Document</div><button class="btn btn-ghost btn-sm" onclick="openDetail(currentId)">&#8592; Cancel</button></div>
-    <div class="card"><div id="docFormWrap"></div></div>
-  </div>
-
-  <!-- SUPERVISORS -->
-  <div id="page-supervisors" class="page" style="display:none">
-    <div class="page-header">
-      <div class="page-title">Supervisors</div>
-      <button class="btn btn-primary btn-sm" id="addSupBtn" onclick="showPage('add-supervisor')">+ Add Supervisor</button>
-    </div>
-    <div class="card" style="padding:0">
-      <div class="table-wrap">
-        <table><thead><tr><th>#</th><th>Name</th><th>Department</th><th>Job Title</th><th>Phone</th><th>Email</th><th>Actions</th></tr></thead>
-        <tbody id="supBody"></tbody></table>
-      </div>
-    </div>
-  </div>
-
-  <!-- ADD SUPERVISOR -->
-  <div id="page-add-supervisor" class="page" style="display:none">
-    <div class="page-header"><div class="page-title">Add Supervisor</div><button class="btn btn-ghost btn-sm" onclick="showPage('supervisors')">&#8592; Cancel</button></div>
-    <div class="card"><div id="addSupWrap"></div></div>
-  </div>
-
-  <!-- INSTITUTIONS -->
-  <div id="page-institutions" class="page" style="display:none">
-    <div class="page-header">
-      <div class="page-title">&#127979; Manage Institutions</div>
-      <button class="btn btn-primary btn-sm" onclick="openInstForm(null)" id="addInstBtn">&#43; Add Institution</button>
-    </div>
-    <div id="instFormWrap"></div>
-    <div class="card" style="padding:0">
-      <table><thead><tr><th>#</th><th>Institution Name</th><th>Type</th><th>County</th><th>Contact</th><th>Email</th><th>Actions</th></tr></thead>
-      <tbody id="instBody"></tbody></table>
-    </div>
-  </div>
-
-  <!-- DEPARTMENTS -->
-  <div id="page-departments" class="page" style="display:none">
-    <div class="page-header">
-      <div class="page-title">&#127970; Manage Departments</div>
-      <button class="btn btn-primary btn-sm" onclick="openDeptForm(null)" id="addDeptBtn">&#43; Add Department</button>
-    </div>
-    <div id="deptFormWrap"></div>
-    <div class="card" style="padding:0">
-      <table><thead><tr><th>#</th><th>Department Name</th><th>Description</th><th>Attachees</th><th>Actions</th></tr></thead>
-      <tbody id="deptBody"></tbody></table>
-    </div>
-  </div>
-
-  <!-- USERS -->
-  <div id="page-users" class="page" style="display:none">
-    <div class="page-header">
-      <div class="page-title">User Management</div>
-      <button class="btn btn-primary btn-sm" onclick="showPage('add-user')">+ Add User</button>
-    </div>
-    <div class="card" style="padding:0">
-      <div class="table-wrap">
-        <table><thead><tr><th>#</th><th>Username</th><th>Full Name</th><th>Email</th><th>Role</th><th>Actions</th></tr></thead>
-        <tbody id="userBody"></tbody></table>
-      </div>
-    </div>
-  </div>
-
-  <!-- ADD USER -->
-  <div id="page-add-user" class="page" style="display:none">
-    <div class="page-header"><div class="page-title">Add User</div><button class="btn btn-ghost btn-sm" onclick="showPage('users')">&#8592; Cancel</button></div>
-    <div class="card"><div id="addUserWrap"></div></div>
-  </div>
-
-  <!-- EMAIL CONFIG -->
-  <div id="page-email-config" class="page" style="display:none">
-    <div class="page-header"><div class="page-title">&#9993; Email Configuration</div></div>
-    <div class="card">
-      <p style="font-size:13.5px;color:var(--gray);margin-bottom:18px;line-height:1.6">
-        Configure the HOD email. Status changes to <strong>Terminated</strong> or <strong>Completed</strong> will open your email client with an alert pre-written.
-      </p>
-      <div class="form-grid">
-        <div class="form-group">
-          <label>HOD Email Address <span class="req">*</span></label>
-          <input type="email" id="cfgHod" placeholder="hod@kilifi.go.ke">
+      <!-- ── DASHBOARD ──────────────────────────────────────────────────────── -->
+      <div id="page-dashboard" class="page" style="display:none">
+        <div class="page-header">
+          <div class="page-title">Dashboard</div>
+          <div class="btn-group">
+            <button class="btn btn-outline btn-sm" onclick="exportCSV()">&#8659; Export CSV</button>
+            <button class="btn btn-primary btn-sm" onclick="showPage('add-attachee')">+ Add Attachee</button>
+          </div>
         </div>
-        <div class="form-group"><label>HOD Name</label><input type="text" id="cfgHodName" placeholder="Faith Kadenge (HOD)"></div>
-        <div class="form-group"><label>Your (Sender) Name</label><input type="text" id="cfgSender"></div>
-        <div class="form-group"><label>Your Email</label><input type="email" id="cfgFrom"></div>
+        <div class="stats-grid" id="dashStats"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;flex-wrap:wrap">
+          <div class="card"><div class="card-title">Department Summary</div><div id="deptSummary"></div></div>
+          <div class="card"><div class="card-title">&#9888; Ending Within 14 Days</div><div id="endingSoon"></div></div>
+        </div>
+        <div class="card"><div class="card-title">&#127942; Top Performers</div><div id="topPerformers"></div></div>
+        <div class="card"><div class="card-title">Recent Attachees</div><div id="recentList"></div></div>
       </div>
-      <div class="btn-group" style="margin-top:16px">
-        <button class="btn btn-primary" onclick="saveEmailConfig()">&#128190; Save</button>
-        <button class="btn btn-outline" onclick="testEmail()">&#9993; Test Email</button>
-      </div>
-      <div id="cfgStatus" style="margin-top:12px"></div>
-    </div>
-  </div>
 
-  <!-- PROFILE / CHANGE CREDENTIALS -->
-  <div id="page-profile" class="page" style="display:none">
-    <div class="page-header"><div class="page-title">&#128100; My Profile</div></div>
-    <div class="card" style="max-width:520px">
-      <div class="card-title">Change Username &amp; Password</div>
-      <p style="font-size:13px;color:var(--gray);margin-bottom:18px;line-height:1.6">
-        Update your login credentials below. You must enter your <strong>current password</strong> to save any changes.
-      </p>
-      <div id="profileFlash"></div>
-      <div class="form-grid">
-        <div class="form-group" style="grid-column:1/-1">
-          <label>Username <span class="req">*</span></label>
-          <input id="p_un" autocomplete="username">
+      <!-- ── ATTACHEES LIST ──────────────────────────────────────────────────── -->
+      <div id="page-attachees" class="page" style="display:none">
+        <div class="page-header">
+          <div class="page-title">All Attachees</div>
+          <button class="btn btn-primary btn-sm" onclick="showPage('add-attachee')">+ Add Attachee</button>
         </div>
-        <div class="form-group" style="grid-column:1/-1">
-          <label>Current Password <span class="req">*</span></label>
-          <input type="password" id="p_cp" autocomplete="current-password" placeholder="Required to confirm changes">
+        <div class="filter-bar">
+          <input type="text" id="srchTerm" placeholder="&#128269; Search name, course, institution…" oninput="renderAttacheeList()">
+          <select id="srchStatus" onchange="renderAttacheeList()">
+            <option value="">All Statuses</option>
+            <option>Active</option><option>Completed</option><option>Terminated</option><option>Deferred</option>
+          </select>
+          <select id="srchDept" onchange="renderAttacheeList()">
+            <option value="">All Departments</option>
+          </select>
         </div>
-        <div class="form-group">
-          <label>New Password</label>
-          <input type="password" id="p_np" autocomplete="new-password" placeholder="Leave blank to keep current">
-        </div>
-        <div class="form-group">
-          <label>Confirm New Password</label>
-          <input type="password" id="p_cp2" autocomplete="new-password" placeholder="Repeat new password">
+        <div class="card" style="padding:0">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>#</th><th>Name</th><th>Institution</th><th>Course</th><th>Department</th>
+                    <th>Start</th><th>End</th><th>Days Left</th><th>Status</th><th>Actions</th></tr>
+              </thead>
+              <tbody id="attacheeBody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
-      <div class="btn-group" style="margin-top:18px">
-        <button class="btn btn-primary" onclick="doSaveProfile()">&#128190; Save Changes</button>
-        <button class="btn btn-ghost" onclick="showPage('dashboard')">Cancel</button>
-      </div>
-    </div>
-  </div>
 
-</div><!-- /container -->
+      <!-- ── ATTACHEE DETAIL ─────────────────────────────────────────────────── -->
+      <div id="page-attachee-detail" class="page" style="display:none">
+        <div class="page-header">
+          <button class="btn btn-ghost btn-sm" onclick="showPage('attachees')">&#8592; Back</button>
+          <div class="btn-group" id="detailBtns"></div>
+        </div>
+        <div id="detailContent"></div>
+      </div>
+
+      <!-- ── ADD ATTACHEE ────────────────────────────────────────────────────── -->
+      <div id="page-add-attachee" class="page" style="display:none">
+        <div class="page-header">
+          <div class="page-title">Add New Attachee</div>
+          <button class="btn btn-ghost btn-sm" onclick="showPage('attachees')">&#8592; Cancel</button>
+        </div>
+        <div class="card"><div id="addAttacheeFormWrap"></div></div>
+      </div>
+
+      <!-- ── EDIT ATTACHEE ───────────────────────────────────────────────────── -->
+      <div id="page-edit-attachee" class="page" style="display:none">
+        <div class="page-header">
+          <div class="page-title">Edit Attachee</div>
+          <button class="btn btn-ghost btn-sm" onclick="openDetail(currentId)">&#8592; Cancel</button>
+        </div>
+        <div class="card"><div id="editAttacheeFormWrap"></div></div>
+      </div>
+
+      <!-- ── ADD EVALUATION ─────────────────────────────────────────────────── -->
+      <div id="page-add-eval" class="page" style="display:none">
+        <div class="page-header">
+          <div class="page-title" id="evalPageTitle">Add Evaluation</div>
+          <button class="btn btn-ghost btn-sm" onclick="openDetail(currentId)">&#8592; Cancel</button>
+        </div>
+        <div class="card"><div id="evalFormWrap"></div></div>
+      </div>
+
+      <!-- ── ADD DOCUMENT ───────────────────────────────────────────────────── -->
+      <div id="page-add-doc" class="page" style="display:none">
+        <div class="page-header">
+          <div class="page-title" id="docPageTitle">Record Document</div>
+          <button class="btn btn-ghost btn-sm" onclick="openDetail(currentId)">&#8592; Cancel</button>
+        </div>
+        <div class="card"><div id="docFormWrap"></div></div>
+      </div>
+
+      <!-- ── SUPERVISORS ─────────────────────────────────────────────────────── -->
+      <div id="page-supervisors" class="page" style="display:none">
+        <div class="page-header">
+          <div class="page-title">Supervisors</div>
+          <button class="btn btn-primary btn-sm" id="addSupBtn" onclick="showPage('add-supervisor')">+ Add Supervisor</button>
+        </div>
+        <div class="card" style="padding:0">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Name</th><th>Department</th><th>Job Title</th><th>Phone</th><th>Email</th><th>Actions</th></tr></thead>
+              <tbody id="supBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ADD SUPERVISOR ─────────────────────────────────────────────────── -->
+      <div id="page-add-supervisor" class="page" style="display:none">
+        <div class="page-header">
+          <div class="page-title">Add Supervisor</div>
+          <button class="btn btn-ghost btn-sm" onclick="showPage('supervisors')">&#8592; Cancel</button>
+        </div>
+        <div class="card"><div id="addSupWrap"></div></div>
+      </div>
+
+      <!-- ── INSTITUTIONS ────────────────────────────────────────────────────── -->
+      <div id="page-institutions" class="page" style="display:none">
+        <div class="page-header">
+          <div class="page-title">&#127979; Manage Institutions</div>
+          <button class="btn btn-primary btn-sm" onclick="openInstForm(null)" id="addInstBtn">&#43; Add Institution</button>
+        </div>
+        <div id="instFormWrap"></div>
+        <div class="card" style="padding:0">
+          <table>
+            <thead><tr><th>#</th><th>Institution Name</th><th>Type</th><th>County</th><th>Contact</th><th>Email</th><th>Actions</th></tr></thead>
+            <tbody id="instBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── DEPARTMENTS ─────────────────────────────────────────────────────── -->
+      <div id="page-departments" class="page" style="display:none">
+        <div class="page-header">
+          <div class="page-title">&#127970; Manage Departments</div>
+          <button class="btn btn-primary btn-sm" onclick="openDeptForm(null)" id="addDeptBtn">&#43; Add Department</button>
+        </div>
+        <div id="deptFormWrap"></div>
+        <div class="card" style="padding:0">
+          <table>
+            <thead><tr><th>#</th><th>Department Name</th><th>Description</th><th>Attachees</th><th>Actions</th></tr></thead>
+            <tbody id="deptBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── USERS ───────────────────────────────────────────────────────────── -->
+      <div id="page-users" class="page" style="display:none">
+        <div class="page-header">
+          <div class="page-title">User Management</div>
+          <button class="btn btn-primary btn-sm" onclick="showPage('add-user')">+ Add User</button>
+        </div>
+        <div class="card" style="padding:0">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Username</th><th>Full Name</th><th>Email</th><th>Role</th><th>Actions</th></tr></thead>
+              <tbody id="userBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ADD USER ────────────────────────────────────────────────────────── -->
+      <div id="page-add-user" class="page" style="display:none">
+        <div class="page-header">
+          <div class="page-title">Add User</div>
+          <button class="btn btn-ghost btn-sm" onclick="showPage('users')">&#8592; Cancel</button>
+        </div>
+        <div class="card"><div id="addUserWrap"></div></div>
+      </div>
+
+      <!-- ── EMAIL CONFIG ────────────────────────────────────────────────────── -->
+      <div id="page-email-config" class="page" style="display:none">
+        <div class="page-header"><div class="page-title">&#9993; Email Configuration</div></div>
+        <div class="card">
+          <p style="font-size:13.5px;color:var(--gray);margin-bottom:18px;line-height:1.6">
+            Configure the HOD email. Status changes to <strong>Terminated</strong> or
+            <strong>Completed</strong> will open your email client with an alert pre-written.
+          </p>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>HOD Email Address <span class="req">*</span></label>
+              <input type="email" id="cfgHod" placeholder="hod@kilifi.go.ke">
+            </div>
+            <div class="form-group"><label>HOD Name</label><input type="text" id="cfgHodName" placeholder="Faith Kadenge (HOD)"></div>
+            <div class="form-group"><label>Your (Sender) Name</label><input type="text" id="cfgSender"></div>
+            <div class="form-group"><label>Your Email</label><input type="email" id="cfgFrom"></div>
+          </div>
+          <div class="btn-group" style="margin-top:16px">
+            <button class="btn btn-primary" onclick="saveEmailConfig()">&#128190; Save</button>
+            <button class="btn btn-outline" onclick="testEmail()">&#9993; Test Email</button>
+          </div>
+          <div id="cfgStatus" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+    </div><!-- /container -->
+  </div><!-- /main-content -->
 </div><!-- /app -->
 
-<!-- MODAL -->
-<div id="modalOverlay" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal()">
+<!-- ═══════════════════════════ MODAL ════════════════════════════════════════ -->
+<div id="modalOverlay" class="modal-overlay" style="display:none"
+     onclick="if(event.target===this)closeModal()">
   <div class="modal" id="modalContent"></div>
 </div>
 
-<!-- LOADING -->
+<!-- ═══════════════════════════ LOADING ══════════════════════════════════════ -->
 <div id="loadingOverlay" class="loading-overlay" style="display:none">
   <div class="spinner"></div> Loading…
 </div>
 
 <script>
+/* ═══════════════════════════════════════════════════════════════
+   Kilifi County ICT Attachee Tracking System — app.js
+   ═══════════════════════════════════════════════════════════════ */
+
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
-const API = '';   // same origin — server serves this file
+const API = '';   // same origin
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let currentUser = null;
-let token = null;
-let currentId = null;
+let token       = null;
+let currentId   = null;
 
-// In-memory cache (refreshed on each page load)
-let DB = { departments:[], institutions:[], supervisors:[], attachees:[], users:[] };
+let DB = { departments: [], institutions: [], supervisors: [], attachees: [], users: [] };
+
+// Highlight the active sidebar item
+function setActiveNavItem(page) {
+  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+  const el = document.getElementById('ndi-' + page);
+  if (el) el.classList.add('active');
+}
 
 // ─── API HELPERS ─────────────────────────────────────────────────────────────
 function authHeaders() {
-  return { 'Content-Type':'application/json', 'Authorization': `Bearer ${token}` };
+  return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
 }
 
-async function apiFetch(path, opts={}) {
+async function apiFetch(path, opts = {}) {
   showLoading(true);
   try {
     const res = await fetch(API + path, {
@@ -410,23 +967,23 @@ function showLoading(v) {
 
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
 async function doLogin() {
-  const u = document.getElementById('loginUser').value.trim();
-  const p = document.getElementById('loginPass').value;
+  const u   = document.getElementById('loginUser').value.trim();
+  const p   = document.getElementById('loginPass').value;
   const btn = document.getElementById('loginBtn');
   btn.disabled = true; btn.textContent = 'Signing in…';
   try {
     const res = await fetch(API + '/api/login', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({username: u, password: p})
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ username: u, password: p }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || 'Login failed');
-    token = data.token;
+    token       = data.token;
     currentUser = data.user;
     localStorage.setItem('ict_token', token);
     startApp();
-  } catch(e) {
+  } catch (e) {
     document.getElementById('loginFlash').innerHTML = mkFlash(e.message, 'danger');
   } finally {
     btn.disabled = false; btn.textContent = 'Sign In';
@@ -455,20 +1012,24 @@ async function tryAutoLogin() {
 function doLogout() {
   token = null; currentUser = null;
   localStorage.removeItem('ict_token');
-  document.getElementById('app').style.display = 'none';
+  document.getElementById('app').style.display       = 'none';
   document.getElementById('loginPage').style.display = 'block';
-  document.getElementById('loginUser').value = '';
-  document.getElementById('loginPass').value = '';
-  document.getElementById('loginFlash').innerHTML = '';
+  document.getElementById('loginUser').value         = '';
+  document.getElementById('loginPass').value         = '';
+  document.getElementById('loginFlash').innerHTML    = '';
 }
 
 async function startApp() {
   document.getElementById('loginPage').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  document.getElementById('navName').textContent = currentUser.fullName;
-  document.getElementById('navRole').textContent = currentUser.role;
-  document.getElementById('adminNav').style.display = currentUser.role === 'admin' ? '' : 'none';
-  document.getElementById('addSupBtn').style.display = currentUser.role === 'admin' ? '' : 'none';
+  document.getElementById('app').style.display       = 'block';
+  document.getElementById('navName').textContent     = currentUser.fullName;
+  document.getElementById('navRole').textContent     = currentUser.role;
+  document.getElementById('sbAvatar').textContent     = initials(currentUser.fullName);
+  const adminOn = currentUser.role === 'admin';
+  document.getElementById('ndi-users').style.display   = adminOn ? '' : 'none';
+  document.getElementById('ndi-export').style.display  = adminOn ? '' : 'none';
+  document.getElementById('adminLabel').style.display   = adminOn ? '' : 'none';
+  document.getElementById('addSupBtn').style.display   = adminOn ? '' : 'none';
   await loadAllData();
   showPage('dashboard');
 }
@@ -488,13 +1049,18 @@ async function loadAllData() {
   if (currentUser.role === 'admin') {
     DB.users = await apiFetch('/api/users');
   }
+  const badge = document.getElementById('attacheeCountBadge');
+  if (badge) {
+    badge.textContent = DB.attachees.length;
+    badge.style.display = DB.attachees.length ? '' : 'none';
+  }
 }
 
 // ─── LOOKUP HELPERS ──────────────────────────────────────────────────────────
-function getDept(id)  { return DB.departments.find(d => d.id === id); }
-function getInst(id)  { return DB.institutions.find(i => i.id === id); }
-function getSup(id)   { return DB.supervisors.find(s => s.id === id); }
-function fullName(a)  { return a ? (a.first_name||a.firstName) + ' ' + (a.last_name||a.lastName) : '—'; }
+function getDept(id) { return DB.departments.find(d => d.id === id); }
+function getInst(id) { return DB.institutions.find(i => i.id === id); }
+function getSup(id)  { return DB.supervisors.find(s => s.id === id); }
+function fullName(a) { return a ? (a.first_name || a.firstName) + ' ' + (a.last_name || a.lastName) : '—'; }
 
 function daysLeft(endDate) {
   if (!endDate) return null;
@@ -502,97 +1068,97 @@ function daysLeft(endDate) {
 }
 
 function enrichAttachee(a) {
-  const deptId = a.department_id || a.departmentId;
+  const deptId = a.department_id  || a.departmentId;
   const instId = a.institution_id || a.institutionId;
   const supId  = a.supervisor_id  || a.supervisorId;
   return {
     ...a,
-    fullName:     fullName(a),
-    department:   getDept(deptId)?.name || '—',
-    institution:  getInst(instId)?.name || '—',
-    supervisor:   getSup(supId)?.name   || '—',
+    fullName:      fullName(a),
+    department:    getDept(deptId)?.name || '—',
+    institution:   getInst(instId)?.name || '—',
+    supervisor:    getSup(supId)?.name   || '—',
     daysRemaining: daysLeft(a.end_date || a.endDate),
-    startDate:    a.start_date || a.startDate,
-    endDate:      a.end_date   || a.endDate,
-    departmentId: deptId, institutionId: instId, supervisorId: supId,
-    firstName:    a.first_name || a.firstName,
-    lastName:     a.last_name  || a.lastName,
-    idNumber:     a.id_number  || a.idNumber || '',
-    yearOfStudy:  a.year_of_study || a.yearOfStudy,
-    regNo:        a.reg_no || a.regNo || '',
+    startDate:     a.start_date || a.startDate,
+    endDate:       a.end_date   || a.endDate,
+    departmentId:  deptId, institutionId: instId, supervisorId: supId,
+    firstName:     a.first_name || a.firstName,
+    lastName:      a.last_name  || a.lastName,
+    idNumber:      a.id_number  || a.idNumber  || '',
+    yearOfStudy:   a.year_of_study || a.yearOfStudy,
+    regNo:         a.reg_no || a.regNo || '',
   };
 }
 
 function avgScore(evals) {
   if (!evals.length) return null;
-  return Math.round(evals.reduce((s,e) => s + e.score, 0) / evals.length);
+  return Math.round(evals.reduce((s, e) => s + e.score, 0) / evals.length);
 }
 function avgAtt(evals) {
   if (!evals.length) return null;
-  return Math.round(evals.reduce((s,e) => s + e.attendance, 0) / evals.length);
+  return Math.round(evals.reduce((s, e) => s + e.attendance, 0) / evals.length);
 }
 
 // ─── PAGE ROUTING ─────────────────────────────────────────────────────────────
 async function showPage(page) {
   document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
-  document.querySelectorAll('.nav-links button').forEach(b => b.classList.remove('active'));
   const el = document.getElementById('page-' + page);
   if (el) el.style.display = 'block';
-  const nb = document.getElementById('nb-' + page);
-  if (nb) nb.classList.add('active');
+  setActiveNavItem(page);
 
-  if (page === 'dashboard')       { await loadAllData(); renderDashboard(); }
-  else if (page === 'attachees')  { await loadAllData(); renderAttacheeList(); populateDeptFilter(); }
-  else if (page === 'supervisors'){ await loadAllData(); renderSupervisors(); }
-  else if (page === 'users')      { DB.users = await apiFetch('/api/users'); renderUsers(); }
-  else if (page === 'institutions'){ await loadAllData(); renderInstitutions(); }
-  else if (page === 'departments'){ await loadAllData(); renderDepartments(); }
+  if      (page === 'dashboard')    { await loadAllData(); renderDashboard(); }
+  else if (page === 'attachees')    { await loadAllData(); renderAttacheeList(); populateDeptFilter(); }
+  else if (page === 'supervisors')  { await loadAllData(); renderSupervisors(); }
+  else if (page === 'users')        { DB.users = await apiFetch('/api/users'); renderUsers(); }
+  else if (page === 'institutions') { await loadAllData(); renderInstitutions(); }
+  else if (page === 'departments')  { await loadAllData(); renderDepartments(); }
   else if (page === 'add-attachee') renderAttacheeForm(null);
   else if (page === 'add-supervisor') renderSupForm();
-  else if (page === 'add-user')   renderUserForm();
+  else if (page === 'add-user')     renderUserForm();
   else if (page === 'email-config') loadEmailConfig();
-  else if (page === 'profile')      loadProfilePage();
 }
 
 // ─── FLASH / HELPERS ─────────────────────────────────────────────────────────
-function mkFlash(msg, type='success') {
+function mkFlash(msg, type = 'success') {
   return `<div class="flash flash-${type}">${msg}<button onclick="this.parentElement.remove()">&#215;</button></div>`;
 }
-function showFlash(msg, type='success') {
+function showFlash(msg, type = 'success') {
   document.getElementById('flashArea').innerHTML = mkFlash(msg, type);
-  setTimeout(() => { const fa = document.getElementById('flashArea'); if(fa) fa.innerHTML=''; }, 5000);
+  setTimeout(() => { const fa = document.getElementById('flashArea'); if (fa) fa.innerHTML = ''; }, 5000);
 }
 function statusBadge(s) {
-  const m = {Active:'green',Completed:'blue',Terminated:'red',Deferred:'amber'};
-  return `<span class="badge badge-${m[s]||'gray'}">${s}</span>`;
+  const m = { Active: 'green', Completed: 'blue', Terminated: 'red', Deferred: 'amber' };
+  return `<span class="badge badge-${m[s] || 'gray'}">${s}</span>`;
 }
 function daysHtml(d) {
-  if (d===null||d===undefined) return '—';
-  if (d < 0) return '<span class="badge badge-gray">Ended</span>';
-  if (d <= 7) return `<span class="days-urgent">${d}d</span>`;
+  if (d === null || d === undefined) return '—';
+  if (d < 0)   return '<span class="badge badge-gray">Ended</span>';
+  if (d <= 7)  return `<span class="days-urgent">${d}d</span>`;
   if (d <= 14) return `<span class="days-warn">${d}d</span>`;
   return `<span class="days-ok">${d}d</span>`;
 }
 function scoreBar(s) {
-  if (s===null||s===undefined) return '—';
-  const c = s>=80?'var(--green)':s>=60?'var(--blue)':'var(--red)';
-  return `<div style="display:flex;align-items:center;gap:6px"><div class="score-bar"><div class="score-fill" style="width:${s}%;background:${c}"></div></div><span style="font-size:12px;font-weight:700;color:${c}">${s}</span></div>`;
+  if (s === null || s === undefined) return '—';
+  const c = s >= 80 ? 'var(--green)' : s >= 60 ? 'var(--blue)' : 'var(--red)';
+  return `<div style="display:flex;align-items:center;gap:6px">
+    <div class="score-bar"><div class="score-fill" style="width:${s}%;background:${c}"></div></div>
+    <span style="font-size:12px;font-weight:700;color:${c}">${s}</span>
+  </div>`;
 }
 function avColors(name) {
-  const p=[['#dbeafe','#1d4ed8'],['#dcfce7','#15803d'],['#fef3c7','#92400e'],['#fce7f3','#9d174d'],['#ede9fe','#5b21b6']];
-  return p[(name||'?').charCodeAt(0)%5];
+  const p = [['#dbeafe','#1d4ed8'],['#dcfce7','#15803d'],['#fef3c7','#92400e'],['#fce7f3','#9d174d'],['#ede9fe','#5b21b6']];
+  return p[(name || '?').charCodeAt(0) % 5];
 }
-function initials(name) { return (name||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase(); }
-function canEdit() { return currentUser && (currentUser.role==='admin'||currentUser.role==='supervisor'); }
-function isAdmin() { return currentUser && currentUser.role==='admin'; }
+function initials(name) { return (name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase(); }
+function canEdit()  { return currentUser && (currentUser.role === 'admin' || currentUser.role === 'supervisor'); }
+function isAdmin()  { return currentUser && currentUser.role === 'admin'; }
 function todayStr() { return new Date().toISOString().split('T')[0]; }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 function renderDashboard() {
-  const all = DB.attachees;
-  const active    = all.filter(a=>a.status==='Active').length;
-  const completed = all.filter(a=>a.status==='Completed').length;
-  const terminated= all.filter(a=>a.status==='Terminated').length;
+  const all       = DB.attachees;
+  const active    = all.filter(a => a.status === 'Active').length;
+  const completed = all.filter(a => a.status === 'Completed').length;
+  const terminated= all.filter(a => a.status === 'Terminated').length;
 
   document.getElementById('dashStats').innerHTML = `
     <div class="stat-card"><div class="stat-num">${all.length}</div><div class="stat-label">Total Attachees</div></div>
@@ -601,27 +1167,35 @@ function renderDashboard() {
     <div class="stat-card red"><div class="stat-num">${terminated}</div><div class="stat-label">Terminated</div></div>`;
 
   const deptRows = DB.departments.map(d => {
-    const att = all.filter(a => (a.department_id||a.departmentId) === d.id);
-    return `<tr><td>${d.name}</td><td>${att.length}</td><td>${att.filter(a=>a.status==='Active').length}</td><td>${att.filter(a=>a.status==='Completed').length}</td></tr>`;
+    const att = all.filter(a => (a.department_id || a.departmentId) === d.id);
+    return `<tr>
+      <td>${d.name}</td><td>${att.length}</td>
+      <td>${att.filter(a => a.status === 'Active').length}</td>
+      <td>${att.filter(a => a.status === 'Completed').length}</td>
+    </tr>`;
   }).join('');
   document.getElementById('deptSummary').innerHTML = `<div class="table-wrap"><table>
     <thead><tr><th>Department</th><th>Total</th><th>Active</th><th>Done</th></tr></thead>
     <tbody>${deptRows}</tbody></table></div>`;
 
-  const soon = all.map(enrichAttachee).filter(a=>a.status==='Active'&&a.daysRemaining>=0&&a.daysRemaining<=14)
-    .sort((a,b)=>a.daysRemaining-b.daysRemaining);
+  const soon = all.map(enrichAttachee)
+    .filter(a => a.status === 'Active' && a.daysRemaining >= 0 && a.daysRemaining <= 14)
+    .sort((a, b) => a.daysRemaining - b.daysRemaining);
   document.getElementById('endingSoon').innerHTML = soon.length
-    ? `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Dept</th><th>End</th><th>Left</th></tr></thead>
-       <tbody>${soon.map(a=>`<tr><td><strong>${a.fullName}</strong></td><td>${a.department}</td><td>${a.endDate}</td><td>${daysHtml(a.daysRemaining)}</td></tr>`).join('')}</tbody></table></div>`
+    ? `<div class="table-wrap"><table>
+        <thead><tr><th>Name</th><th>Dept</th><th>End</th><th>Left</th></tr></thead>
+        <tbody>${soon.map(a => `<tr>
+          <td><strong>${a.fullName}</strong></td><td>${a.department}</td>
+          <td>${a.endDate}</td><td>${daysHtml(a.daysRemaining)}</td>
+        </tr>`).join('')}</tbody></table></div>`
     : '<div class="empty">No attachees ending soon &#127881;</div>';
 
-  // Top performers — we don't cache evals globally; show placeholder if none loaded
   document.getElementById('topPerformers').innerHTML = '<div class="empty" style="font-size:12px;padding:10px">Open an attachee record to see evaluations</div>';
 
-  const recent = [...all].reverse().slice(0,6).map(enrichAttachee);
+  const recent = [...all].reverse().slice(0, 6).map(enrichAttachee);
   document.getElementById('recentList').innerHTML = `<div class="table-wrap"><table>
     <thead><tr><th>Name</th><th>Institution</th><th>Department</th><th>Start</th><th>Status</th><th></th></tr></thead>
-    <tbody>${recent.map(a=>`<tr>
+    <tbody>${recent.map(a => `<tr>
       <td><strong>${a.fullName}</strong></td><td>${a.institution}</td><td>${a.department}</td>
       <td>${a.startDate}</td><td>${statusBadge(a.status)}</td>
       <td><button class="btn btn-outline btn-sm" onclick="openDetail(${a.id})">View</button></td>
@@ -633,32 +1207,30 @@ function populateDeptFilter() {
   const sel = document.getElementById('srchDept');
   const cur = sel.value;
   sel.innerHTML = '<option value="">All Departments</option>' +
-    DB.departments.map(d=>`<option ${d.name===cur?'selected':''}>${d.name}</option>`).join('');
+    DB.departments.map(d => `<option ${d.name === cur ? 'selected' : ''}>${d.name}</option>`).join('');
 }
 
 function renderAttacheeList() {
-  const titleEl = document.getElementById('attacheeListTitle');
-  if (titleEl) titleEl.textContent = (currentUser.role === 'supervisor') ? 'My Attachees' : 'All Attachees';
-  const srch = (document.getElementById('srchTerm').value||'').toLowerCase();
+  const srch = (document.getElementById('srchTerm').value || '').toLowerCase();
   const st   = document.getElementById('srchStatus').value;
   const dp   = document.getElementById('srchDept').value;
   let list   = DB.attachees.map(enrichAttachee);
-  if (st)   list = list.filter(a=>a.status===st);
-  if (dp)   list = list.filter(a=>a.department===dp);
-  if (srch) list = list.filter(a=>(a.fullName+a.institution+(a.course||'')).toLowerCase().includes(srch));
-  list.sort((a,b)=>a.fullName.localeCompare(b.fullName));
+  if (st)   list = list.filter(a => a.status === st);
+  if (dp)   list = list.filter(a => a.department === dp);
+  if (srch) list = list.filter(a => (a.fullName + a.institution + (a.course || '')).toLowerCase().includes(srch));
+  list.sort((a, b) => a.fullName.localeCompare(b.fullName));
   const canE = canEdit();
-  document.getElementById('attacheeBody').innerHTML = list.map((a,i)=>`<tr>
-    <td>${i+1}</td>
+  document.getElementById('attacheeBody').innerHTML = list.map((a, i) => `<tr>
+    <td>${i + 1}</td>
     <td><strong>${a.fullName}</strong></td>
-    <td>${a.institution}</td><td>${a.course||'—'}</td><td>${a.department}</td>
+    <td>${a.institution}</td><td>${a.course || '—'}</td><td>${a.department}</td>
     <td>${a.startDate}</td><td>${a.endDate}</td>
     <td>${daysHtml(a.daysRemaining)}</td>
     <td>${statusBadge(a.status)}</td>
     <td><div class="btn-group">
       <button class="btn btn-outline btn-sm" onclick="openDetail(${a.id})">View</button>
-      ${canE?`<button class="btn btn-ghost btn-sm" onclick="openEdit(${a.id})">Edit</button>`:''}
-      ${isAdmin()?`<button class="btn btn-danger btn-sm" onclick="deleteAttachee(${a.id})">Del</button>`:''}
+      ${canE      ? `<button class="btn btn-ghost btn-sm" onclick="openEdit(${a.id})">Edit</button>` : ''}
+      ${isAdmin() ? `<button class="btn btn-danger btn-sm" onclick="deleteAttachee(${a.id})">Del</button>` : ''}
     </div></td>
   </tr>`).join('') || '<tr><td colspan="10" class="empty">No attachees found</td></tr>';
 }
@@ -678,12 +1250,12 @@ async function openDetail(id) {
   const a   = enrichAttachee(raw);
   const avg = avgScore(evals);
   const att = avgAtt(evals);
-  const [bg,fg] = avColors(a.fullName);
+  const [bg, fg] = avColors(a.fullName);
   const canE = canEdit();
 
   const evHtml = evals.length ? evals.map(e => {
-    const supName = getSup(e.evaluated_by||e.evaluatedBy)?.name || '—';
-    const bc = e.performance==='Excellent'?'badge-green':e.performance==='Good'?'badge-blue':e.performance==='Average'?'badge-amber':'badge-red';
+    const supName = getSup(e.evaluated_by || e.evaluatedBy)?.name || '—';
+    const bc = e.performance === 'Excellent' ? 'badge-green' : e.performance === 'Good' ? 'badge-blue' : e.performance === 'Average' ? 'badge-amber' : 'badge-red';
     return `<div class="eval-card">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
         <div><strong>${e.type} Evaluation</strong> <span style="font-size:12px;color:var(--gray)"> — ${e.date}</span></div>
@@ -691,22 +1263,23 @@ async function openDetail(id) {
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;font-size:12.5px">
         <div class="info-row"><span class="info-label">Attendance</span><span>${e.attendance}%</span></div>
-        <div class="info-row"><span class="info-label">Technical Skills</span><span>${e.technical_skills||'—'}</span></div>
-        <div class="info-row"><span class="info-label">Communication</span><span>${e.communication||'—'}</span></div>
-        <div class="info-row"><span class="info-label">Punctuality</span><span>${e.punctuality||'—'}</span></div>
-        <div class="info-row"><span class="info-label">Team Work</span><span>${e.team_work||'—'}</span></div>
+        <div class="info-row"><span class="info-label">Technical Skills</span><span>${e.technical_skills || '—'}</span></div>
+        <div class="info-row"><span class="info-label">Communication</span><span>${e.communication || '—'}</span></div>
+        <div class="info-row"><span class="info-label">Punctuality</span><span>${e.punctuality || '—'}</span></div>
+        <div class="info-row"><span class="info-label">Team Work</span><span>${e.team_work || '—'}</span></div>
         <div class="info-row"><span class="info-label">Evaluated By</span><span>${supName}</span></div>
       </div>
-      ${e.remarks?`<div style="margin-top:8px;padding:8px;background:var(--gray-light);border-radius:6px;font-size:12.5px;color:var(--gray)">&#128172; ${e.remarks}</div>`:''}
+      ${e.remarks ? `<div style="margin-top:8px;padding:8px;background:var(--gray-light);border-radius:6px;font-size:12.5px;color:var(--gray)">&#128172; ${e.remarks}</div>` : ''}
     </div>`;
   }).join('') : '<div class="empty">No evaluations yet</div>';
 
   const docHtml = docs.length ? `<div class="table-wrap"><table>
     <thead><tr><th>Type</th><th>File Name</th><th>Issued</th><th>Notes</th></tr></thead>
-    <tbody>${docs.map(d=>`<tr>
-      <td><span class="badge badge-gray">${d.doc_type||'—'}</span></td>
-      <td>${d.file_name}</td><td>${d.issued_date||'—'}</td><td>${d.notes||'—'}</td>
-    </tr>`).join('')}</tbody></table></div>` : '<div class="empty">No documents recorded</div>';
+    <tbody>${docs.map(d => `<tr>
+      <td><span class="badge badge-gray">${d.doc_type || '—'}</span></td>
+      <td>${d.file_name}</td><td>${d.issued_date || '—'}</td><td>${d.notes || '—'}</td>
+    </tr>`).join('')}</tbody></table></div>`
+    : '<div class="empty">No documents recorded</div>';
 
   document.getElementById('detailBtns').innerHTML = canE ? `
     <button class="btn btn-primary btn-sm" onclick="openAddEval(${id})">+ Evaluation</button>
@@ -721,22 +1294,21 @@ async function openDetail(id) {
         <div class="av" style="background:${bg};color:${fg};width:52px;height:52px;font-size:19px">${initials(a.fullName)}</div>
         <div style="flex:1">
           <div style="font-size:20px;font-weight:700;color:var(--navy)">${a.fullName}</div>
-          <div style="font-size:13px;color:var(--gray);margin-top:2px">${a.course||''}${a.institution?' &middot; '+a.institution:''}</div>
+          <div style="font-size:13px;color:var(--gray);margin-top:2px">${a.course || ''}${a.institution ? ' &middot; ' + a.institution : ''}</div>
         </div>
         ${statusBadge(a.status)}
       </div>
       <div class="detail-grid">
         <div>
           <div class="form-section-hd">Personal &amp; Academic</div>
-          <div class="info-row"><span class="info-label">ID Number</span><span>${a.idNumber||'—'}</span></div>
-          <div class="info-row"><span class="info-label">Gender</span><span>${raw.gender||'—'}</span></div>
-          <div class="info-row"><span class="info-label">Date of Birth</span><span>${raw.dob||'—'}</span></div>
-          <div class="info-row"><span class="info-label">Phone</span><span>${raw.phone||'—'}</span></div>
-          <div class="info-row"><span class="info-label">Alt Phone</span><span>${raw.alt_phone||'—'}</span></div>
-          <div class="info-row"><span class="info-label">Email</span><span>${raw.email||'—'}</span></div>
+          <div class="info-row"><span class="info-label">ID Number</span><span>${a.idNumber || '—'}</span></div>
+          <div class="info-row"><span class="info-label">Gender</span><span>${raw.gender || '—'}</span></div>
+          <div class="info-row"><span class="info-label">Date of Birth</span><span>${raw.dob || '—'}</span></div>
+          <div class="info-row"><span class="info-label">Phone</span><span>${raw.phone || '—'}</span></div>
+          <div class="info-row"><span class="info-label">Email</span><span>${raw.email || '—'}</span></div>
           <div class="info-row"><span class="info-label">Institution</span><span>${a.institution}</span></div>
-          <div class="info-row"><span class="info-label">Reg No</span><span>${a.regNo||'—'}</span></div>
-          <div class="info-row"><span class="info-label">Year of Study</span><span>${a.yearOfStudy||'—'}</span></div>
+          <div class="info-row"><span class="info-label">Reg No</span><span>${a.regNo || '—'}</span></div>
+          <div class="info-row"><span class="info-label">Year of Study</span><span>${a.yearOfStudy || '—'}</span></div>
         </div>
         <div>
           <div class="form-section-hd">Placement</div>
@@ -747,202 +1319,112 @@ async function openDetail(id) {
           <div class="info-row"><span class="info-label">Days Remaining</span><span>${daysHtml(a.daysRemaining)}</span></div>
           <div class="form-section-hd" style="margin-top:14px">Performance</div>
           <div class="info-row"><span class="info-label">Total Evaluations</span><span>${evals.length}</span></div>
-          <div class="info-row"><span class="info-label">Average Score</span><span>${avg!==null?scoreBar(avg):'—'}</span></div>
-          <div class="info-row"><span class="info-label">Avg Attendance</span><span>${att!==null?att+'%':'—'}</span></div>
-          <div class="info-row"><span class="info-label">Last Evaluated</span><span>${evals[0]?.date||'—'}</span></div>
+          <div class="info-row"><span class="info-label">Average Score</span><span>${avg !== null ? scoreBar(avg) : '—'}</span></div>
+          <div class="info-row"><span class="info-label">Avg Attendance</span><span>${att !== null ? att + '%' : '—'}</span></div>
+          <div class="info-row"><span class="info-label">Last Evaluated</span><span>${evals[0]?.date || '—'}</span></div>
         </div>
       </div>
-      ${raw.notes?`<div style="margin-top:12px;padding:10px;background:var(--blue-light);border-radius:6px;font-size:13px;color:#1e40af"><strong>Notes:</strong> ${raw.notes}</div>`:''}
+      ${raw.notes ? `<div style="margin-top:12px;padding:10px;background:var(--blue-light);border-radius:6px;font-size:13px;color:#1e40af"><strong>Notes:</strong> ${raw.notes}</div>` : ''}
     </div>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <div class="card-title" style="margin:0;border:0;padding:0">Progress Evaluations</div>
-        ${canE?`<button class="btn btn-primary btn-sm" onclick="openAddEval(${id})">+ Add</button>`:''}
+        ${canE ? `<button class="btn btn-primary btn-sm" onclick="openAddEval(${id})">+ Add</button>` : ''}
       </div>
       ${evHtml}
     </div>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <div class="card-title" style="margin:0;border:0;padding:0">Documents on File</div>
-        ${canE?`<button class="btn btn-outline btn-sm" onclick="openAddDoc(${id})">+ Record</button>`:''}
+        ${canE ? `<button class="btn btn-outline btn-sm" onclick="openAddDoc(${id})">+ Record</button>` : ''}
       </div>
       ${docHtml}
     </div>
     <div id="hodReportArea"></div>`;
 }
 
-
-// ─── INSTITUTION COMBO BOX ─────────────────────────────────────────────────
-function filterInstDropdown(val) {
-  const dd = document.getElementById('inst_dropdown');
-  if (!dd) return;
-  const q = val.toLowerCase().trim();
-  const matches = q ? DB.institutions.filter(i => i.name.toLowerCase().includes(q)) : DB.institutions.slice(0, 10);
-  let html = matches.map(i =>
-    `<div style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--gray-mid)"
-      onmousedown="selectInst(${i.id},'${i.name.replace(/'/g,"\\'")}')">
-       <strong>${i.name}</strong> <span style="font-size:11px;color:var(--gray)">${i.type||''}</span>
-     </div>`
-  ).join('');
-  const exactMatch = DB.institutions.find(i => i.name.toLowerCase() === q);
-  const isAdmin = currentUser && currentUser.role === 'admin';
-  if (q && !exactMatch && isAdmin) {
-    html += `<div style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--blue);background:var(--blue-light);border-top:1px solid var(--blue-mid)"
-      onmousedown="prepareNewInst('${val.replace(/'/g,"\\'")}')">
-      &#43; Add "<strong>${val}</strong>" as new institution
-    </div>`;
-  }
-  dd.innerHTML = html || `<div style="padding:8px 12px;font-size:13px;color:var(--gray)">No matches</div>`;
-  dd.style.display = 'block';
-}
-
-function selectInst(id, name) {
-  document.getElementById('f_inst').value = id;
-  document.getElementById('f_inst_text').value = name;
-  document.getElementById('inst_dropdown').style.display = 'none';
-}
-
-function hideInstDropdown() {
-  setTimeout(() => {
-    const dd = document.getElementById('inst_dropdown');
-    if (dd) dd.style.display = 'none';
-  }, 200);
-}
-
-function prepareNewInst(name) {
-  // Show a mini inline form to capture the type, then save on submit
-  document.getElementById('f_inst').value = '__new__';
-  document.getElementById('f_inst_text').value = name;
-  document.getElementById('inst_dropdown').style.display = 'none';
-  // Store the new institution name for saving on form submit
-  window._newInstName = name;
-  // Show type prompt below the field
-  const wrap = document.getElementById('f_inst_text').closest('.form-group');
-  let typeRow = document.getElementById('new_inst_type_row');
-  if (!typeRow) {
-    typeRow = document.createElement('div');
-    typeRow.id = 'new_inst_type_row';
-    typeRow.style.cssText = 'margin-top:6px;display:flex;gap:8px;align-items:center';
-    typeRow.innerHTML = `<select id="new_inst_type" style="flex:1;padding:6px 9px;border:1.5px solid var(--blue);border-radius:6px;font-size:13px">
-      <option value="">Type (optional)</option>
-      <option>University</option><option>College</option><option>Polytechnic</option><option>TVET</option><option>Other</option>
-    </select>
-    <span style="font-size:11px;color:var(--blue);white-space:nowrap">&#43; will be saved</span>`;
-    wrap.appendChild(typeRow);
-  }
-}
-
-async function resolveInstitution() {
-  const instHidden = document.getElementById('f_inst');
-  if (instHidden && instHidden.value === '__new__') {
-    const name = window._newInstName || document.getElementById('f_inst_text').value.trim();
-    const type = document.getElementById('new_inst_type')?.value || '';
-    if (!name) return null;
-    try {
-      const newInst = await apiFetch('/api/institutions', {method:'POST', body:{name, type}});
-      DB.institutions.push(newInst);
-      instHidden.value = newInst.id;
-      return newInst.id;
-    } catch(e) { showFlash('Could not save new institution: ' + e.message, 'danger'); return null; }
-  }
-  return parseInt(instHidden?.value) || null;
-}
-
 // ─── ADD / EDIT ATTACHEE ──────────────────────────────────────────────────────
 function renderAttacheeForm(existing) {
-  const a = existing || {};
-  const deptId = a.department_id||a.departmentId;
-  const instId = a.institution_id||a.institutionId;
-  const supId  = a.supervisor_id||a.supervisorId;
-  const deptOpts = DB.departments.map(d=>`<option value="${d.id}"${deptId===d.id?' selected':''}>${d.name}</option>`).join('');
-  const instOpts = DB.institutions.map(i=>`<option value="${i.id}"${instId===i.id?' selected':''}>${i.name}</option>`).join('');
-  const supOpts  = DB.supervisors.map(s=>`<option value="${s.id}"${supId===s.id?' selected':''}>${s.name}</option>`).join('');
-  const statusOpts = ['Active','Completed','Terminated','Deferred'].map(s=>`<option${(a.status||'Active')===s?' selected':''}>${s}</option>`).join('');
+  const a      = existing || {};
+  const deptId = a.department_id  || a.departmentId;
+  const instId = a.institution_id || a.institutionId;
+  const supId  = a.supervisor_id  || a.supervisorId;
+  const deptOpts   = DB.departments.map(d  => `<option value="${d.id}"${deptId === d.id ? ' selected' : ''}>${d.name}</option>`).join('');
+  const instOpts   = DB.institutions.map(i  => `<option value="${i.id}"${instId === i.id ? ' selected' : ''}>${i.name}</option>`).join('');
+  const supOpts    = DB.supervisors.map(s   => `<option value="${s.id}"${supId  === s.id ? ' selected' : ''}>${s.name}</option>`).join('');
+  const statusOpts = ['Active','Completed','Terminated','Deferred'].map(s => `<option${(a.status || 'Active') === s ? ' selected' : ''}>${s}</option>`).join('');
   const isEdit = !!existing;
-  const isAdmin = currentUser && currentUser.role === 'admin';
-  const fn = a.first_name||a.firstName||'';
-  const ln = a.last_name||a.lastName||'';
+  const fn = a.first_name || a.firstName || '';
+  const ln = a.last_name  || a.lastName  || '';
+
   const html = `
     <div class="form-section-hd">Personal Information</div>
     <div class="form-grid">
       <div class="form-group"><label>First Name <span class="req">*</span></label><input id="f_fn" value="${fn}"></div>
       <div class="form-group"><label>Last Name <span class="req">*</span></label><input id="f_ln" value="${ln}"></div>
-      <div class="form-group"><label>ID Number</label><input id="f_id" value="${a.id_number||a.idNumber||''}"></div>
+      <div class="form-group"><label>ID Number</label><input id="f_id" value="${a.id_number || a.idNumber || ''}"></div>
       <div class="form-group"><label>Gender</label><select id="f_gd"><option value="">—</option>
-        <option${a.gender==='Male'?' selected':''}>Male</option>
-        <option${a.gender==='Female'?' selected':''}>Female</option>
-        <option${a.gender==='Other'?' selected':''}>Other</option></select></div>
-      <div class="form-group"><label>Date of Birth</label><input type="date" id="f_dob" value="${a.dob||''}"></div>
-      <div class="form-group"><label>Phone <span class="req">*</span></label><input id="f_ph" value="${a.phone||''}" placeholder="+254 7xx xxx xxx" required></div>
-      <div class="form-group"><label>Alt Phone</label><input id="f_ph2" value="${a.alt_phone||''}" placeholder="Optional alternative number"></div>
-      <div class="form-group"><label>Email</label><input type="email" id="f_em" value="${a.email||''}"></div>
+        <option${a.gender === 'Male'   ? ' selected' : ''}>Male</option>
+        <option${a.gender === 'Female' ? ' selected' : ''}>Female</option>
+        <option${a.gender === 'Other'  ? ' selected' : ''}>Other</option></select></div>
+      <div class="form-group"><label>Date of Birth</label><input type="date" id="f_dob" value="${a.dob || ''}"></div>
+      <div class="form-group"><label>Phone</label><input id="f_ph" value="${a.phone || ''}"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="f_em" value="${a.email || ''}"></div>
     </div>
     <div class="form-section-hd">Academic Details</div>
     <div class="form-grid">
-      <div class="form-group" style="position:relative">
-        <label>Institution ${isAdmin?'<span style="font-size:11px;color:var(--blue)">(type to add new)</span>':''}</label>
-        <input id="f_inst_text" autocomplete="off" placeholder="Type institution name…"
-          value="${instId ? DB.institutions.find(i=>i.id===instId)?.name||'' : ''}"
-          oninput="filterInstDropdown(this.value)" onfocus="filterInstDropdown(this.value)" onblur="hideInstDropdown()">
-        <input type="hidden" id="f_inst" value="${instId||''}">
-        <div id="inst_dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid var(--blue);border-top:none;border-radius:0 0 6px 6px;z-index:300;max-height:200px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.1)"></div>
-      </div>
-      <div class="form-group"><label>Course <span class="req">*</span></label><input id="f_co" value="${a.course||''}"></div>
-      <div class="form-group"><label>Year of Study</label><input type="number" id="f_yr" min="1" max="6" value="${a.year_of_study||a.yearOfStudy||''}"></div>
-      <div class="form-group"><label>Reg No</label><input id="f_rg" value="${a.reg_no||a.regNo||''}"></div>
+      <div class="form-group"><label>Institution</label><select id="f_inst"><option value="">— Select —</option>${instOpts}</select></div>
+      <div class="form-group"><label>Course <span class="req">*</span></label><input id="f_co" value="${a.course || ''}"></div>
+      <div class="form-group"><label>Year of Study</label><input type="number" id="f_yr" min="1" max="6" value="${a.year_of_study || a.yearOfStudy || ''}"></div>
+      <div class="form-group"><label>Reg No</label><input id="f_rg" value="${a.reg_no || a.regNo || ''}"></div>
     </div>
     <div class="form-section-hd">Placement</div>
     <div class="form-grid">
       <div class="form-group"><label>Department <span class="req">*</span></label><select id="f_dp"><option value="">— Select —</option>${deptOpts}</select></div>
       <div class="form-group"><label>Supervisor <span class="req">*</span></label><select id="f_sp"><option value="">— Select —</option>${supOpts}</select></div>
-      <div class="form-group"><label>Start Date <span class="req">*</span></label><input type="date" id="f_sd" value="${a.start_date||a.startDate||todayStr()}"></div>
-      <div class="form-group"><label>End Date <span class="req">*</span></label><input type="date" id="f_ed" value="${a.end_date||a.endDate||''}"></div>
-      ${isEdit?`<div class="form-group"><label>Status</label><select id="f_st">${statusOpts}</select></div>`:''}
+      <div class="form-group"><label>Start Date <span class="req">*</span></label><input type="date" id="f_sd" value="${a.start_date || a.startDate || todayStr()}"></div>
+      <div class="form-group"><label>End Date <span class="req">*</span></label><input type="date" id="f_ed" value="${a.end_date || a.endDate || ''}"></div>
+      ${isEdit ? `<div class="form-group"><label>Status</label><select id="f_st">${statusOpts}</select></div>` : ''}
     </div>
-    <div class="form-group" style="margin-top:12px"><label>Notes</label><textarea id="f_no">${a.notes||''}</textarea></div>
+    <div class="form-group" style="margin-top:12px"><label>Notes</label><textarea id="f_no">${a.notes || ''}</textarea></div>
     <div class="btn-group" style="margin-top:16px">
-      <button class="btn btn-primary" onclick="${isEdit?`doSaveEdit(${a.id})`:'doSaveAdd()'}">${isEdit?'Save Changes':'Add Attachee'}</button>
-      <button class="btn btn-ghost" onclick="showPage('${isEdit?'attachee-detail':'attachees'}')">Cancel</button>
+      <button class="btn btn-primary" onclick="${isEdit ? `doSaveEdit(${a.id})` : 'doSaveAdd()'}">${isEdit ? 'Save Changes' : 'Add Attachee'}</button>
+      <button class="btn btn-ghost" onclick="showPage('${isEdit ? 'attachee-detail' : 'attachees'}')">Cancel</button>
     </div>`;
-  document.getElementById(isEdit?'editAttacheeFormWrap':'addAttacheeFormWrap').innerHTML = html;
+  document.getElementById(isEdit ? 'editAttacheeFormWrap' : 'addAttacheeFormWrap').innerHTML = html;
 }
 
 function getFormVals(isEdit) {
   return {
-    firstName:    document.getElementById('f_fn').value.trim(),
-    lastName:     document.getElementById('f_ln').value.trim(),
-    idNumber:     document.getElementById('f_id').value.trim(),
-    gender:       document.getElementById('f_gd').value,
-    dob:          document.getElementById('f_dob').value,
-    phone:        (document.getElementById('f_ph').value||'').trim(),
-    email:        document.getElementById('f_em').value.trim(),
-    institutionId:parseInt(document.getElementById('f_inst').value)||null,
-    altPhone:     document.getElementById('f_ph2')?.value.trim()||'',
-    course:       document.getElementById('f_co').value.trim(),
-    yearOfStudy:  parseInt(document.getElementById('f_yr').value)||null,
-    regNo:        document.getElementById('f_rg').value.trim(),
-    departmentId: parseInt(document.getElementById('f_dp').value)||null,
-    supervisorId: parseInt(document.getElementById('f_sp').value)||null,
-    startDate:    document.getElementById('f_sd').value,
-    endDate:      document.getElementById('f_ed').value,
-    notes:        document.getElementById('f_no').value.trim(),
-    status:       isEdit ? (document.getElementById('f_st')?.value||'Active') : 'Active',
+    firstName:     document.getElementById('f_fn').value.trim(),
+    lastName:      document.getElementById('f_ln').value.trim(),
+    idNumber:      document.getElementById('f_id').value.trim(),
+    gender:        document.getElementById('f_gd').value,
+    dob:           document.getElementById('f_dob').value,
+    phone:         document.getElementById('f_ph').value.trim(),
+    email:         document.getElementById('f_em').value.trim(),
+    institutionId: parseInt(document.getElementById('f_inst').value) || null,
+    course:        document.getElementById('f_co').value.trim(),
+    yearOfStudy:   parseInt(document.getElementById('f_yr').value) || null,
+    regNo:         document.getElementById('f_rg').value.trim(),
+    departmentId:  parseInt(document.getElementById('f_dp').value) || null,
+    supervisorId:  parseInt(document.getElementById('f_sp').value) || null,
+    startDate:     document.getElementById('f_sd').value,
+    endDate:       document.getElementById('f_ed').value,
+    notes:         document.getElementById('f_no').value.trim(),
+    status:        isEdit ? (document.getElementById('f_st')?.value || 'Active') : 'Active',
   };
 }
 
 async function doSaveAdd() {
   const v = getFormVals(false);
-  if (!v.firstName||!v.lastName||!v.startDate||!v.endDate) { showFlash('Fill all required fields.','danger'); return; }
-  if (!v.phone) { showFlash('Phone number is required.','danger'); return; }
-  // Resolve/save new institution if typed
-  const resolvedInstId = await resolveInstitution();
-  if (resolvedInstId !== null) v.institutionId = resolvedInstId;
+  if (!v.firstName || !v.lastName || !v.startDate || !v.endDate) { showFlash('Fill all required fields.', 'danger'); return; }
   try {
-    const newA = await apiFetch('/api/attachees', {method:'POST', body:v});
+    const newA = await apiFetch('/api/attachees', { method: 'POST', body: v });
     DB.attachees.push(newA);
     showFlash(`${v.firstName} ${v.lastName} added successfully.`);
     openDetail(newA.id);
-  } catch(e) { showFlash(e.message,'danger'); }
+  } catch (e) { showFlash(e.message, 'danger'); }
 }
 
 async function openEdit(id) {
@@ -954,43 +1436,40 @@ async function openEdit(id) {
 
 async function doSaveEdit(id) {
   const v = getFormVals(true);
-  if (!v.firstName||!v.lastName) { showFlash('Name required.','danger'); return; }
-  if (!v.phone) { showFlash('Phone number is required.','danger'); return; }
-  const resolvedInstId = await resolveInstitution();
-  if (resolvedInstId !== null) v.institutionId = resolvedInstId;
-  const oldStatus = DB.attachees.find(a=>a.id===id)?.status;
+  if (!v.firstName || !v.lastName) { showFlash('Name required.', 'danger'); return; }
+  const oldStatus = DB.attachees.find(a => a.id === id)?.status;
   try {
-    const updated = await apiFetch(`/api/attachees/${id}`, {method:'PUT', body:v});
-    DB.attachees = DB.attachees.map(a => a.id===id ? updated : a);
-    if (v.status !== oldStatus && (v.status==='Terminated'||v.status==='Completed')) {
+    const updated = await apiFetch(`/api/attachees/${id}`, { method: 'PUT', body: v });
+    DB.attachees = DB.attachees.map(a => a.id === id ? updated : a);
+    if (v.status !== oldStatus && (v.status === 'Terminated' || v.status === 'Completed')) {
       triggerStatusEmail(id, v.status);
     }
     showFlash('Record updated successfully.');
     openDetail(id);
-  } catch(e) { showFlash(e.message,'danger'); }
+  } catch (e) { showFlash(e.message, 'danger'); }
 }
 
 async function deleteAttachee(id) {
-  const a = DB.attachees.find(x=>x.id===id);
-  if (!a||!confirm(`Delete ${fullName(a)}? This cannot be undone.`)) return;
+  const a = DB.attachees.find(x => x.id === id);
+  if (!a || !confirm(`Delete ${fullName(a)}? This cannot be undone.`)) return;
   try {
-    await apiFetch(`/api/attachees/${id}`, {method:'DELETE'});
-    DB.attachees = DB.attachees.filter(x=>x.id!==id);
-    showFlash(`${fullName(a)} deleted.`,'warning');
+    await apiFetch(`/api/attachees/${id}`, { method: 'DELETE' });
+    DB.attachees = DB.attachees.filter(x => x.id !== id);
+    showFlash(`${fullName(a)} deleted.`, 'warning');
     showPage('attachees');
-  } catch(e) { showFlash(e.message,'danger'); }
+  } catch (e) { showFlash(e.message, 'danger'); }
 }
 
 // ─── STATUS MODAL ─────────────────────────────────────────────────────────────
 function openStatusModal(id, currentStatus) {
   const statuses = ['Active','Completed','Terminated','Deferred'];
-  const a = DB.attachees.find(x=>x.id===id);
+  const a = DB.attachees.find(x => x.id === id);
   document.getElementById('modalContent').innerHTML = `
     <div class="modal-title">Update Status &mdash; ${fullName(a)} <button class="modal-close" onclick="closeModal()">&#215;</button></div>
     <p style="font-size:13px;color:var(--gray);margin-bottom:14px">Current: ${statusBadge(currentStatus)}</p>
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
-      ${statuses.map(s=>`<label style="display:flex;align-items:center;gap:10px;padding:9px 13px;border:1.5px solid ${s===currentStatus?'var(--blue)':'var(--gray-mid)'};border-radius:8px;cursor:pointer;background:${s===currentStatus?'var(--blue-light)':'transparent'}">
-        <input type="radio" name="ns" value="${s}"${s===currentStatus?' checked':''}> ${statusBadge(s)}
+      ${statuses.map(s => `<label style="display:flex;align-items:center;gap:10px;padding:9px 13px;border:1.5px solid ${s === currentStatus ? 'var(--blue)' : 'var(--gray-mid)'};border-radius:8px;cursor:pointer;background:${s === currentStatus ? 'var(--blue-light)' : 'transparent'}">
+        <input type="radio" name="ns" value="${s}"${s === currentStatus ? ' checked' : ''}> ${statusBadge(s)}
       </label>`).join('')}
     </div>
     <div id="statusAlert" style="display:none;border-radius:8px;padding:11px 13px;font-size:13px;margin-bottom:14px"></div>
@@ -1000,15 +1479,15 @@ function openStatusModal(id, currentStatus) {
     </div>`;
   document.querySelectorAll('input[name="ns"]').forEach(r => {
     r.addEventListener('change', () => {
-      const v = document.querySelector('input[name="ns"]:checked').value;
+      const v  = document.querySelector('input[name="ns"]:checked').value;
       const al = document.getElementById('statusAlert');
-      if (v==='Terminated'||v==='Completed') {
-        al.style.display='block';
-        al.style.background=v==='Terminated'?'var(--red-light)':'var(--green-light)';
-        al.style.border=`1px solid ${v==='Terminated'?'#fecaca':'var(--green-mid)'}`;
-        al.style.color=v==='Terminated'?'#991b1b':'#15803d';
-        al.innerHTML='&#128231; An email alert will be prepared for the HOD when you confirm.';
-      } else { al.style.display='none'; }
+      if (v === 'Terminated' || v === 'Completed') {
+        al.style.display    = 'block';
+        al.style.background = v === 'Terminated' ? 'var(--red-light)' : 'var(--green-light)';
+        al.style.border     = `1px solid ${v === 'Terminated' ? '#fecaca' : 'var(--green-mid)'}`;
+        al.style.color      = v === 'Terminated' ? '#991b1b' : '#15803d';
+        al.innerHTML        = '&#128231; An email alert will be prepared for the HOD when you confirm.';
+      } else { al.style.display = 'none'; }
     });
   });
   openModal();
@@ -1017,34 +1496,37 @@ function openStatusModal(id, currentStatus) {
 async function confirmStatus(id) {
   const ns = document.querySelector('input[name="ns"]:checked')?.value;
   if (!ns) return;
-  const old = DB.attachees.find(a=>a.id===id)?.status;
+  const old = DB.attachees.find(a => a.id === id)?.status;
   try {
-    const a = DB.attachees.find(x=>x.id===id);
-    const payload = { ...a, status: ns,
-      firstName: a.first_name||a.firstName, lastName: a.last_name||a.lastName,
-      startDate: a.start_date||a.startDate, endDate: a.end_date||a.endDate,
-      departmentId: a.department_id||a.departmentId,
-      institutionId: a.institution_id||a.institutionId,
-      supervisorId: a.supervisor_id||a.supervisorId,
-      idNumber: a.id_number||a.idNumber, regNo: a.reg_no||a.regNo,
-      altPhone: a.alt_phone||a.altPhone||'', phone: a.phone||'',
-      yearOfStudy: a.year_of_study||a.yearOfStudy,
+    const a = DB.attachees.find(x => x.id === id);
+    const payload = {
+      ...a, status: ns,
+      firstName:    a.first_name    || a.firstName,
+      lastName:     a.last_name     || a.lastName,
+      startDate:    a.start_date    || a.startDate,
+      endDate:      a.end_date      || a.endDate,
+      departmentId: a.department_id || a.departmentId,
+      institutionId:a.institution_id|| a.institutionId,
+      supervisorId: a.supervisor_id || a.supervisorId,
+      idNumber:     a.id_number     || a.idNumber,
+      regNo:        a.reg_no        || a.regNo,
+      yearOfStudy:  a.year_of_study || a.yearOfStudy,
     };
-    const updated = await apiFetch(`/api/attachees/${id}`, {method:'PUT', body:payload});
-    DB.attachees = DB.attachees.map(x => x.id===id ? updated : x);
+    const updated = await apiFetch(`/api/attachees/${id}`, { method: 'PUT', body: payload });
+    DB.attachees = DB.attachees.map(x => x.id === id ? updated : x);
     closeModal();
-    if (ns !== old && (ns==='Terminated'||ns==='Completed')) triggerStatusEmail(id, ns);
+    if (ns !== old && (ns === 'Terminated' || ns === 'Completed')) triggerStatusEmail(id, ns);
     showFlash(`Status updated to ${ns}`);
     openDetail(id);
-  } catch(e) { showFlash(e.message,'danger'); }
+  } catch (e) { showFlash(e.message, 'danger'); }
 }
 
 // ─── EVALUATIONS ──────────────────────────────────────────────────────────────
 function openAddEval(id) {
   currentId = id;
-  const a = DB.attachees.find(x=>x.id===id);
+  const a = DB.attachees.find(x => x.id === id);
   document.getElementById('evalPageTitle').textContent = `Add Evaluation — ${fullName(a)}`;
-  const supOpts = DB.supervisors.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  const supOpts = DB.supervisors.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
   document.getElementById('evalFormWrap').innerHTML = `
     <div class="form-grid">
       <div class="form-group"><label>Date <span class="req">*</span></label><input type="date" id="e_dt" value="${todayStr()}"></div>
@@ -1072,40 +1554,40 @@ function openAddEval(id) {
 
 function autoPerf() {
   const s = parseInt(document.getElementById('e_sc').value);
-  document.getElementById('e_pf').value = s>=85?'Excellent':s>=70?'Good':s>=55?'Average':'Poor';
+  document.getElementById('e_pf').value = s >= 85 ? 'Excellent' : s >= 70 ? 'Good' : s >= 55 ? 'Average' : 'Poor';
 }
 
 async function doSaveEval() {
   const id = currentId;
   const payload = {
-    date: document.getElementById('e_dt').value,
-    type: document.getElementById('e_tp').value,
-    score: parseInt(document.getElementById('e_sc').value),
-    performance: document.getElementById('e_pf').value,
-    attendance: parseInt(document.getElementById('e_at').value),
-    technicalSkills: document.getElementById('e_ts').value,
-    communication: document.getElementById('e_cm').value,
-    punctuality: document.getElementById('e_pu').value,
-    teamWork: document.getElementById('e_tw').value,
-    remarks: document.getElementById('e_rm').value,
-    evaluatedBy: parseInt(document.getElementById('e_by').value)||null,
+    date:           document.getElementById('e_dt').value,
+    type:           document.getElementById('e_tp').value,
+    score:          parseInt(document.getElementById('e_sc').value),
+    performance:    document.getElementById('e_pf').value,
+    attendance:     parseInt(document.getElementById('e_at').value),
+    technicalSkills:document.getElementById('e_ts').value,
+    communication:  document.getElementById('e_cm').value,
+    punctuality:    document.getElementById('e_pu').value,
+    teamWork:       document.getElementById('e_tw').value,
+    remarks:        document.getElementById('e_rm').value,
+    evaluatedBy:    parseInt(document.getElementById('e_by').value) || null,
   };
   try {
-    await apiFetch(`/api/attachees/${id}/evaluations`, {method:'POST', body:payload});
+    await apiFetch(`/api/attachees/${id}/evaluations`, { method: 'POST', body: payload });
     showFlash('Evaluation saved.');
     openDetail(id);
-  } catch(e) { showFlash(e.message,'danger'); }
+  } catch (e) { showFlash(e.message, 'danger'); }
 }
 
 // ─── DOCUMENTS ────────────────────────────────────────────────────────────────
 function openAddDoc(id) {
   currentId = id;
-  const a = DB.attachees.find(x=>x.id===id);
+  const a = DB.attachees.find(x => x.id === id);
   document.getElementById('docPageTitle').textContent = `Record Document — ${fullName(a)}`;
   const types = ['Acceptance Letter','Introduction Letter','Completion Certificate','Insurance','ID Copy','Transcript','Report','Other'];
   document.getElementById('docFormWrap').innerHTML = `
     <div class="form-grid">
-      <div class="form-group"><label>Document Type</label><select id="d_tp">${types.map(t=>`<option>${t}</option>`).join('')}</select></div>
+      <div class="form-group"><label>Document Type</label><select id="d_tp">${types.map(t => `<option>${t}</option>`).join('')}</select></div>
       <div class="form-group"><label>File Name <span class="req">*</span></label><input id="d_fn" placeholder="e.g. john_intro_letter.pdf"></div>
       <div class="form-group"><label>Issued Date</label><input type="date" id="d_dt" value="${todayStr()}"></div>
     </div>
@@ -1118,33 +1600,33 @@ function openAddDoc(id) {
 }
 
 async function doSaveDoc() {
-  const id = currentId;
+  const id   = currentId;
   const name = document.getElementById('d_fn').value.trim();
-  if (!name) { showFlash('File name is required.','danger'); return; }
+  if (!name) { showFlash('File name is required.', 'danger'); return; }
   try {
-    await apiFetch(`/api/attachees/${id}/documents`, {method:'POST', body:{
-      docType: document.getElementById('d_tp').value,
-      fileName: name,
+    await apiFetch(`/api/attachees/${id}/documents`, { method: 'POST', body: {
+      docType:    document.getElementById('d_tp').value,
+      fileName:   name,
       issuedDate: document.getElementById('d_dt').value,
-      notes: document.getElementById('d_nt').value,
+      notes:      document.getElementById('d_nt').value,
     }});
     showFlash('Document recorded.');
     openDetail(id);
-  } catch(e) { showFlash(e.message,'danger'); }
+  } catch (e) { showFlash(e.message, 'danger'); }
 }
 
 // ─── SUPERVISORS ──────────────────────────────────────────────────────────────
 function renderSupervisors() {
-  document.getElementById('supBody').innerHTML = DB.supervisors.map((s,i) => {
-    const dept = getDept(s.department_id||s.departmentId)?.name||'—';
-    return `<tr><td>${i+1}</td><td><strong>${s.name}</strong></td><td>${dept}</td>
-      <td>${s.job_title||s.jobTitle||'—'}</td><td>${s.phone||'—'}</td><td>${s.email||'—'}</td>
-      <td>${isAdmin()?`<button class="btn btn-danger btn-sm" onclick="deleteSup(${s.id})">Del</button>`:'—'}</td></tr>`;
+  document.getElementById('supBody').innerHTML = DB.supervisors.map((s, i) => {
+    const dept = getDept(s.department_id || s.departmentId)?.name || '—';
+    return `<tr><td>${i + 1}</td><td><strong>${s.name}</strong></td><td>${dept}</td>
+      <td>${s.job_title || s.jobTitle || '—'}</td><td>${s.phone || '—'}</td><td>${s.email || '—'}</td>
+      <td>${isAdmin() ? `<button class="btn btn-danger btn-sm" onclick="deleteSup(${s.id})">Del</button>` : '—'}</td></tr>`;
   }).join('') || '<tr><td colspan="7" class="empty">No supervisors</td></tr>';
 }
 
 function renderSupForm() {
-  const deptOpts = DB.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  const deptOpts = DB.departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
   document.getElementById('addSupWrap').innerHTML = `
     <div class="form-grid">
       <div class="form-group"><label>Full Name <span class="req">*</span></label><input id="s_nm"></div>
@@ -1161,171 +1643,175 @@ function renderSupForm() {
 
 async function doSaveSup() {
   const name = document.getElementById('s_nm').value.trim();
-  if (!name) { showFlash('Name is required.','danger'); return; }
+  if (!name) { showFlash('Name is required.', 'danger'); return; }
   try {
-    const s = await apiFetch('/api/supervisors', {method:'POST', body:{
-      name, departmentId: parseInt(document.getElementById('s_dp').value)||null,
-      jobTitle: document.getElementById('s_jt').value,
-      phone: document.getElementById('s_ph').value,
-      email: document.getElementById('s_em').value,
+    const s = await apiFetch('/api/supervisors', { method: 'POST', body: {
+      name,
+      departmentId: parseInt(document.getElementById('s_dp').value) || null,
+      jobTitle:     document.getElementById('s_jt').value,
+      phone:        document.getElementById('s_ph').value,
+      email:        document.getElementById('s_em').value,
     }});
     DB.supervisors.push(s);
     showFlash('Supervisor added.');
     showPage('supervisors');
-  } catch(e) { showFlash(e.message,'danger'); }
+  } catch (e) { showFlash(e.message, 'danger'); }
 }
 
 async function deleteSup(id) {
-  const s = DB.supervisors.find(x=>x.id===id);
+  const s = DB.supervisors.find(x => x.id === id);
   if (!confirm(`Delete ${s?.name}?`)) return;
   try {
-    await apiFetch(`/api/supervisors/${id}`, {method:'DELETE'});
-    DB.supervisors = DB.supervisors.filter(x=>x.id!==id);
-    showFlash(`${s?.name} deleted.`,'warning');
+    await apiFetch(`/api/supervisors/${id}`, { method: 'DELETE' });
+    DB.supervisors = DB.supervisors.filter(x => x.id !== id);
+    showFlash(`${s?.name} deleted.`, 'warning');
     renderSupervisors();
-  } catch(e) { showFlash(e.message,'danger'); }
+  } catch (e) { showFlash(e.message, 'danger'); }
 }
 
 // ─── INSTITUTIONS ─────────────────────────────────────────────────────────────
 function renderInstitutions() {
-  const admin = isAdmin()||canEdit();
+  const admin = isAdmin() || canEdit();
   document.getElementById('instBody').innerHTML = DB.institutions.map(inst => {
-    const used = DB.attachees.filter(a=>(a.institution_id||a.institutionId)===inst.id).length;
+    const used = DB.attachees.filter(a => (a.institution_id || a.institutionId) === inst.id).length;
     return `<tr>
       <td>${inst.id}</td><td><strong>${inst.name}</strong></td>
-      <td><span class="badge badge-blue">${inst.type||'—'}</span></td>
-      <td>${inst.county||'—'}</td><td>${inst.contact||'—'}</td><td>${inst.email||'—'}</td>
+      <td><span class="badge badge-blue">${inst.type || '—'}</span></td>
+      <td>${inst.county || '—'}</td><td>${inst.contact || '—'}</td><td>${inst.email || '—'}</td>
       <td>
-        ${admin?`<button class="btn btn-outline btn-sm" onclick="openInstForm(${inst.id})">&#9998; Edit</button>`:''}
-        ${used===0&&admin?`<button class="btn btn-danger btn-sm" onclick="deleteInst(${inst.id})">&#128465;</button>`:''}
-        ${used>0?`<span style="font-size:11px;color:var(--gray)">${used} attachee${used>1?'s':''}</span>`:''}
+        ${admin ? `<button class="btn btn-outline btn-sm" onclick="openInstForm(${inst.id})">&#9998; Edit</button>` : ''}
+        ${used === 0 && admin ? `<button class="btn btn-danger btn-sm" onclick="deleteInst(${inst.id})">&#128465;</button>` : ''}
+        ${used > 0 ? `<span style="font-size:11px;color:var(--gray)">${used} attachee${used > 1 ? 's' : ''}</span>` : ''}
       </td></tr>`;
   }).join('') || '<tr><td colspan="7" class="empty">No institutions yet</td></tr>';
 }
 
 function openInstForm(id) {
-  const inst = id ? DB.institutions.find(i=>i.id===id) : null;
+  const inst  = id ? DB.institutions.find(i => i.id === id) : null;
   const types = ['University','College','Polytechnic','TVET','Other'];
   document.getElementById('instFormWrap').innerHTML = `
     <div class="card" style="border-left:4px solid var(--blue);margin-bottom:16px">
-      <div class="card-title">${inst?'&#9998; Edit Institution':'&#43; Add New Institution'}</div>
+      <div class="card-title">${inst ? '&#9998; Edit Institution' : '&#43; Add New Institution'}</div>
       <div class="form-grid">
-        <div class="form-group" style="grid-column:1/-1"><label>Name <span class="req">*</span></label><input id="if_name" value="${inst?.name||''}"></div>
-        <div class="form-group"><label>Type</label><select id="if_type"><option value="">— Select —</option>${types.map(t=>`<option${inst?.type===t?' selected':''}>${t}</option>`).join('')}</select></div>
-        <div class="form-group"><label>County</label><input id="if_county" value="${inst?.county||''}"></div>
-        <div class="form-group"><label>Contact</label><input id="if_contact" value="${inst?.contact||''}"></div>
-        <div class="form-group"><label>Email</label><input type="email" id="if_email" value="${inst?.email||''}"></div>
+        <div class="form-group" style="grid-column:1/-1"><label>Name <span class="req">*</span></label><input id="if_name" value="${inst?.name || ''}"></div>
+        <div class="form-group"><label>Type</label><select id="if_type"><option value="">— Select —</option>${types.map(t => `<option${inst?.type === t ? ' selected' : ''}>${t}</option>`).join('')}</select></div>
+        <div class="form-group"><label>County</label><input id="if_county" value="${inst?.county || ''}"></div>
+        <div class="form-group"><label>Contact</label><input id="if_contact" value="${inst?.contact || ''}"></div>
+        <div class="form-group"><label>Email</label><input type="email" id="if_email" value="${inst?.email || ''}"></div>
       </div>
       <div class="btn-group" style="margin-top:14px">
-        <button class="btn btn-primary" onclick="saveInst(${inst?.id||'null'})">&#128190; Save</button>
+        <button class="btn btn-primary" onclick="saveInst(${inst?.id || 'null'})">&#128190; Save</button>
         <button class="btn btn-outline" onclick="document.getElementById('instFormWrap').innerHTML=''">Cancel</button>
       </div>
     </div>`;
-  document.getElementById('instFormWrap').scrollIntoView({behavior:'smooth'});
+  document.getElementById('instFormWrap').scrollIntoView({ behavior: 'smooth' });
 }
 
 async function saveInst(id) {
   const name = document.getElementById('if_name').value.trim();
-  if (!name) { showFlash('Name is required.','warning'); return; }
-  const payload = {name, type:document.getElementById('if_type').value, county:document.getElementById('if_county').value.trim(), contact:document.getElementById('if_contact').value.trim(), email:document.getElementById('if_email').value.trim()};
+  if (!name) { showFlash('Name is required.', 'warning'); return; }
+  const payload = { name, type: document.getElementById('if_type').value, county: document.getElementById('if_county').value.trim(), contact: document.getElementById('if_contact').value.trim(), email: document.getElementById('if_email').value.trim() };
   try {
     if (id) {
-      const updated = await apiFetch(`/api/institutions/${id}`, {method:'PUT', body:payload});
-      DB.institutions = DB.institutions.map(i=>i.id===id?updated:i);
+      const updated = await apiFetch(`/api/institutions/${id}`, { method: 'PUT', body: payload });
+      DB.institutions = DB.institutions.map(i => i.id === id ? updated : i);
       showFlash('Institution updated.');
     } else {
-      const newI = await apiFetch('/api/institutions', {method:'POST', body:payload});
+      const newI = await apiFetch('/api/institutions', { method: 'POST', body: payload });
       DB.institutions.push(newI);
-      showFlash('Institution added.','success');
+      showFlash('Institution added.', 'success');
     }
-    document.getElementById('instFormWrap').innerHTML='';
+    document.getElementById('instFormWrap').innerHTML = '';
     renderInstitutions();
-  } catch(e) { showFlash(e.message,'danger'); }
+  } catch (e) { showFlash(e.message, 'danger'); }
 }
 
 async function deleteInst(id) {
-  const inst = DB.institutions.find(i=>i.id===id);
+  const inst = DB.institutions.find(i => i.id === id);
   if (!confirm(`Delete "${inst?.name}"?`)) return;
   try {
-    await apiFetch(`/api/institutions/${id}`, {method:'DELETE'});
-    DB.institutions = DB.institutions.filter(i=>i.id!==id);
+    await apiFetch(`/api/institutions/${id}`, { method: 'DELETE' });
+    DB.institutions = DB.institutions.filter(i => i.id !== id);
     showFlash('Institution deleted.');
     renderInstitutions();
-  } catch(e) { showFlash(e.message,'danger'); }
+  } catch (e) { showFlash(e.message, 'danger'); }
 }
 
 // ─── DEPARTMENTS ──────────────────────────────────────────────────────────────
 function renderDepartments() {
-  const admin = isAdmin()||canEdit();
+  const admin = isAdmin() || canEdit();
   document.getElementById('deptBody').innerHTML = DB.departments.map(dept => {
-    const used   = DB.attachees.filter(a=>(a.department_id||a.departmentId)===dept.id).length;
-    const active = DB.attachees.filter(a=>(a.department_id||a.departmentId)===dept.id&&a.status==='Active').length;
-    const sup    = DB.supervisors.find(s=>(s.department_id||s.departmentId)===dept.id);
+    const used   = DB.attachees.filter(a => (a.department_id || a.departmentId) === dept.id).length;
+    const active = DB.attachees.filter(a => (a.department_id || a.departmentId) === dept.id && a.status === 'Active').length;
+    const sup    = DB.supervisors.find(s  => (s.department_id || s.departmentId) === dept.id);
     return `<tr>
       <td>${dept.id}</td>
-      <td><strong>${dept.name}</strong>${sup?`<br><small style="color:var(--gray)">&#128100; ${sup.name}</small>`:''}</td>
-      <td style="font-size:12px;color:var(--gray)">${dept.description||'—'}</td>
-      <td style="text-align:center">${used>0?`<span class="badge badge-blue">${active} active</span> <span style="font-size:11px;color:var(--gray)">/ ${used} total</span>`:'0'}</td>
+      <td><strong>${dept.name}</strong>${sup ? `<br><small style="color:var(--gray)">&#128100; ${sup.name}</small>` : ''}</td>
+      <td style="font-size:12px;color:var(--gray)">${dept.description || '—'}</td>
+      <td style="text-align:center">${used > 0 ? `<span class="badge badge-blue">${active} active</span> <span style="font-size:11px;color:var(--gray)">/ ${used} total</span>` : '0'}</td>
       <td>
-        ${admin?`<button class="btn btn-outline btn-sm" onclick="openDeptForm(${dept.id})">&#9998; Edit</button>`:''}
-        ${used===0&&admin?`<button class="btn btn-danger btn-sm" onclick="deleteDept(${dept.id})">&#128465;</button>`:''}
+        ${admin ? `<button class="btn btn-outline btn-sm" onclick="openDeptForm(${dept.id})">&#9998; Edit</button>` : ''}
+        ${used === 0 && admin ? `<button class="btn btn-danger btn-sm" onclick="deleteDept(${dept.id})">&#128465;</button>` : ''}
       </td></tr>`;
   }).join('') || '<tr><td colspan="5" class="empty">No departments yet</td></tr>';
 }
 
 function openDeptForm(id) {
-  const dept = id ? DB.departments.find(d=>d.id===id) : null;
+  const dept = id ? DB.departments.find(d => d.id === id) : null;
   document.getElementById('deptFormWrap').innerHTML = `
     <div class="card" style="border-left:4px solid var(--blue);margin-bottom:16px">
-      <div class="card-title">${dept?'&#9998; Edit Department':'&#43; Add New Department'}</div>
+      <div class="card-title">${dept ? '&#9998; Edit Department' : '&#43; Add New Department'}</div>
       <div class="form-grid">
-        <div class="form-group" style="grid-column:1/-1"><label>Name <span class="req">*</span></label><input id="df_name" value="${dept?.name||''}"></div>
-        <div class="form-group" style="grid-column:1/-1"><label>Description</label><input id="df_desc" value="${dept?.description||''}"></div>
+        <div class="form-group" style="grid-column:1/-1"><label>Name <span class="req">*</span></label><input id="df_name" value="${dept?.name || ''}"></div>
+        <div class="form-group" style="grid-column:1/-1"><label>Description</label><input id="df_desc" value="${dept?.description || ''}"></div>
       </div>
       <div class="btn-group" style="margin-top:14px">
-        <button class="btn btn-primary" onclick="saveDept(${dept?.id||'null'})">&#128190; Save</button>
+        <button class="btn btn-primary" onclick="saveDept(${dept?.id || 'null'})">&#128190; Save</button>
         <button class="btn btn-outline" onclick="document.getElementById('deptFormWrap').innerHTML=''">Cancel</button>
       </div>
     </div>`;
-  document.getElementById('deptFormWrap').scrollIntoView({behavior:'smooth'});
+  document.getElementById('deptFormWrap').scrollIntoView({ behavior: 'smooth' });
 }
 
 async function saveDept(id) {
   const name = document.getElementById('df_name').value.trim();
-  if (!name) { showFlash('Name is required.','warning'); return; }
-  const payload = {name, description: document.getElementById('df_desc').value.trim()};
+  if (!name) { showFlash('Name is required.', 'warning'); return; }
+  const payload = { name, description: document.getElementById('df_desc').value.trim() };
   try {
     if (id) {
-      const updated = await apiFetch(`/api/departments/${id}`, {method:'PUT', body:payload});
-      DB.departments = DB.departments.map(d=>d.id===id?updated:d);
+      const updated = await apiFetch(`/api/departments/${id}`, { method: 'PUT', body: payload });
+      DB.departments = DB.departments.map(d => d.id === id ? updated : d);
       showFlash('Department updated.');
     } else {
-      const newD = await apiFetch('/api/departments', {method:'POST', body:payload});
+      const newD = await apiFetch('/api/departments', { method: 'POST', body: payload });
       DB.departments.push(newD);
-      showFlash('Department added.','success');
+      showFlash('Department added.', 'success');
     }
-    document.getElementById('deptFormWrap').innerHTML='';
+    document.getElementById('deptFormWrap').innerHTML = '';
     renderDepartments();
-  } catch(e) { showFlash(e.message,'danger'); }
+  } catch (e) { showFlash(e.message, 'danger'); }
 }
 
 async function deleteDept(id) {
-  const dept = DB.departments.find(d=>d.id===id);
+  const dept = DB.departments.find(d => d.id === id);
   if (!confirm(`Delete "${dept?.name}"?`)) return;
   try {
-    await apiFetch(`/api/departments/${id}`, {method:'DELETE'});
-    DB.departments = DB.departments.filter(d=>d.id!==id);
+    await apiFetch(`/api/departments/${id}`, { method: 'DELETE' });
+    DB.departments = DB.departments.filter(d => d.id !== id);
     showFlash('Department deleted.');
     renderDepartments();
-  } catch(e) { showFlash(e.message,'danger'); }
+  } catch (e) { showFlash(e.message, 'danger'); }
 }
 
 // ─── USERS ────────────────────────────────────────────────────────────────────
 function renderUsers() {
-  document.getElementById('userBody').innerHTML = DB.users.map((u,i)=>`<tr>
-    <td>${i+1}</td><td><strong>${u.username}</strong></td><td>${u.full_name||u.fullName}</td><td>${u.email||'—'}</td>
-    <td><span class="badge ${u.role==='admin'?'badge-red':u.role==='supervisor'?'badge-blue':'badge-gray'}">${u.role}</span></td>
-    <td>${u.id!==currentUser.id?`<button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id})">Del</button>`:'<span style="color:var(--gray);font-size:11px">(you)</span>'}</td>
+  document.getElementById('userBody').innerHTML = DB.users.map((u, i) => `<tr>
+    <td>${i + 1}</td><td><strong>${u.username}</strong></td><td>${u.full_name || u.fullName}</td><td>${u.email || '—'}</td>
+    <td><span class="badge ${u.role === 'admin' ? 'badge-red' : u.role === 'supervisor' ? 'badge-blue' : 'badge-gray'}">${u.role}</span></td>
+    <td>${u.id !== currentUser.id
+      ? `<button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id})">Del</button>`
+      : '<span style="color:var(--gray);font-size:11px">(you)</span>'
+    }</td>
   </tr>`).join('');
 }
 
@@ -1345,37 +1831,45 @@ function renderUserForm() {
 }
 
 async function doSaveUser() {
-  const u=document.getElementById('u_un').value.trim(), n=document.getElementById('u_fn').value.trim(), p=document.getElementById('u_pw').value;
-  if (!u||!n||!p) { showFlash('Username, name and password are required.','danger'); return; }
+  const u = document.getElementById('u_un').value.trim();
+  const n = document.getElementById('u_fn').value.trim();
+  const p = document.getElementById('u_pw').value;
+  if (!u || !n || !p) { showFlash('Username, name and password are required.', 'danger'); return; }
   try {
-    const newU = await apiFetch('/api/users', {method:'POST', body:{username:u,fullName:n,email:document.getElementById('u_em').value,password:p,role:document.getElementById('u_rl').value}});
+    const newU = await apiFetch('/api/users', { method: 'POST', body: {
+      username: u, fullName: n, email: document.getElementById('u_em').value,
+      password: p, role: document.getElementById('u_rl').value,
+    }});
     DB.users.push(newU);
     showFlash(`User ${u} created.`);
     showPage('users');
-  } catch(e) { showFlash(e.message,'danger'); }
+  } catch (e) { showFlash(e.message, 'danger'); }
 }
 
 async function deleteUser(id) {
-  const u = DB.users.find(x=>x.id===id);
+  const u = DB.users.find(x => x.id === id);
   if (!confirm(`Delete user ${u?.username}?`)) return;
   try {
-    await apiFetch(`/api/users/${id}`, {method:'DELETE'});
-    DB.users = DB.users.filter(x=>x.id!==id);
-    showFlash(`${u?.username} deleted.`,'warning');
+    await apiFetch(`/api/users/${id}`, { method: 'DELETE' });
+    DB.users = DB.users.filter(x => x.id !== id);
+    showFlash(`${u?.username} deleted.`, 'warning');
     renderUsers();
-  } catch(e) { showFlash(e.message,'danger'); }
+  } catch (e) { showFlash(e.message, 'danger'); }
 }
 
 // ─── EMAIL CONFIG ─────────────────────────────────────────────────────────────
 const EMAIL_CFG = 'ict_email_cfg_v2';
+
 function loadEmailConfig() {
-  const c = JSON.parse(localStorage.getItem(EMAIL_CFG)||'{}');
-  document.getElementById('cfgHod').value     = c.hod||'kadengefaith022@gmail.com';
-  document.getElementById('cfgHodName').value = c.hodName||'Faith Kadenge (HOD)';
-  document.getElementById('cfgSender').value  = c.sender||currentUser?.fullName||'';
-  document.getElementById('cfgFrom').value    = c.from||currentUser?.email||'';
+  const c = JSON.parse(localStorage.getItem(EMAIL_CFG) || '{}');
+  document.getElementById('cfgHod').value     = c.hod     || 'kadengefaith022@gmail.com';
+  document.getElementById('cfgHodName').value = c.hodName || 'Faith Kadenge (HOD)';
+  document.getElementById('cfgSender').value  = c.sender  || currentUser?.fullName || '';
+  document.getElementById('cfgFrom').value    = c.from    || currentUser?.email    || '';
 }
-function getEmailCfg() { return JSON.parse(localStorage.getItem(EMAIL_CFG)||'{"hod":"kadengefaith022@gmail.com","hodName":"Faith Kadenge (HOD)"}'); }
+function getEmailCfg() {
+  return JSON.parse(localStorage.getItem(EMAIL_CFG) || '{"hod":"kadengefaith022@gmail.com","hodName":"Faith Kadenge (HOD)"}');
+}
 function saveEmailConfig() {
   localStorage.setItem(EMAIL_CFG, JSON.stringify({
     hod:     document.getElementById('cfgHod').value.trim(),
@@ -1386,24 +1880,26 @@ function saveEmailConfig() {
   document.getElementById('cfgStatus').innerHTML = mkFlash('Configuration saved.');
 }
 function sendEmail(to, subject, body) {
-  window.open(`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,'_blank');
+  window.open(`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
 }
 function testEmail() {
   const c = getEmailCfg();
-  if (!c.hod) { document.getElementById('cfgStatus').innerHTML = mkFlash('Enter HOD email first.','danger'); return; }
-  sendEmail(c.hod,'Test — ICT Attachee System',`Dear ${c.hodName||'HOD'},\n\nTest email from ICT Attachee Tracking System.\n\nSent by: ${c.sender||currentUser?.fullName}\nDate: ${new Date().toLocaleString('en-KE')}`);
-  document.getElementById('cfgStatus').innerHTML = mkFlash('Email client opened.','info');
+  if (!c.hod) { document.getElementById('cfgStatus').innerHTML = mkFlash('Enter HOD email first.', 'danger'); return; }
+  sendEmail(c.hod, 'Test — ICT Attachee System',
+    `Dear ${c.hodName || 'HOD'},\n\nTest email from ICT Attachee Tracking System.\n\nSent by: ${c.sender || currentUser?.fullName}\nDate: ${new Date().toLocaleString('en-KE')}`);
+  document.getElementById('cfgStatus').innerHTML = mkFlash('Email client opened.', 'info');
 }
 
 // ─── HOD REPORT ───────────────────────────────────────────────────────────────
 async function sendReportToHOD(id) {
   const c = getEmailCfg();
-  if (!c.hod) { showFlash('Please configure the HOD email first.','warning'); return; }
+  if (!c.hod) { showFlash('Please configure the HOD email first.', 'warning'); return; }
   const [raw, evals] = await Promise.all([apiFetch(`/api/attachees/${id}`), apiFetch(`/api/attachees/${id}/evaluations`)]);
-  const a = enrichAttachee(raw);
+  const a      = enrichAttachee(raw);
   const latest = evals[0];
-  const avg = avgScore(evals); const att = avgAtt(evals);
-  const body = `Dear ${c.hodName||'Head of ICT Department'},
+  const avg    = avgScore(evals);
+  const att    = avgAtt(evals);
+  const body = `Dear ${c.hodName || 'Head of ICT Department'},
 
 Please find below the latest progress report for:
 
@@ -1412,7 +1908,7 @@ ATTACHEE PROGRESS REPORT
 Name:            ${a.fullName}
 Department:      ${a.department}
 Institution:     ${a.institution}
-Course:          ${a.course||'—'}
+Course:          ${a.course || '—'}
 Attachment:      ${a.startDate} → ${a.endDate}
 Status:          ${a.status}
 Supervisor:      ${a.supervisor}
@@ -1420,24 +1916,24 @@ Supervisor:      ${a.supervisor}
 PERFORMANCE SUMMARY
 ──────────────────
 Total Evaluations:  ${evals.length}
-Average Score:      ${avg!==null?avg+'/100':'Not yet evaluated'}
-Avg Attendance:     ${att!==null?att+'%':'—'}
-Last Evaluated:     ${evals[0]?.date||'N/A'}
+Average Score:      ${avg !== null ? avg + '/100' : 'Not yet evaluated'}
+Avg Attendance:     ${att !== null ? att + '%' : '—'}
+Last Evaluated:     ${evals[0]?.date || 'N/A'}
 
-${latest?`LATEST EVALUATION (${latest.type} — ${latest.date})
+${latest ? `LATEST EVALUATION (${latest.type} — ${latest.date})
 ──────────────────
 Score:            ${latest.score}/100
 Performance:      ${latest.performance}
 Attendance:       ${latest.attendance}%
-Technical Skills: ${latest.technical_skills||'—'}
-Communication:    ${latest.communication||'—'}
-Punctuality:      ${latest.punctuality||'—'}
-Team Work:        ${latest.team_work||'—'}
-Remarks:          ${latest.remarks||'—'}`:'No evaluations recorded yet.'}
+Technical Skills: ${latest.technical_skills || '—'}
+Communication:    ${latest.communication || '—'}
+Punctuality:      ${latest.punctuality || '—'}
+Team Work:        ${latest.team_work || '—'}
+Remarks:          ${latest.remarks || '—'}` : 'No evaluations recorded yet.'}
 
 ══════════════════════════════════
-Reported by: ${c.sender||currentUser?.fullName||'Supervisor'}
-Date: ${new Date().toLocaleString('en-KE',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}
+Reported by: ${c.sender || currentUser?.fullName || 'Supervisor'}
+Date: ${new Date().toLocaleString('en-KE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
 (Generated by ICT Attachee Tracking System)`;
 
   const subject = `Progress Report — ${a.fullName} | ${a.department}`;
@@ -1451,70 +1947,83 @@ Date: ${new Date().toLocaleString('en-KE',{weekday:'long',year:'numeric',month:'
         <button class="btn btn-outline" onclick='navigator.clipboard.writeText(${JSON.stringify(body)}).then(()=>showFlash("Copied!"))'>&#128203; Copy</button>
       </div>
     </div>`;
-  document.getElementById('hodReportArea').scrollIntoView({behavior:'smooth'});
+  document.getElementById('hodReportArea').scrollIntoView({ behavior: 'smooth' });
 }
 
 function triggerStatusEmail(id, newStatus) {
   const c = getEmailCfg();
   if (!c.hod) return;
-  const a = enrichAttachee(DB.attachees.find(x=>x.id===id));
-  const isT = newStatus==='Terminated';
-  const subject = `${isT?'⚠ URGENT: ':''}Attachee ${newStatus} — ${a.fullName}`;
-  const body = `Dear ${c.hodName||'Head of ICT Department'},\n\n${isT?'⚠ URGENT — ATTACHEE TERMINATED':'ATTACHEE COMPLETION NOTIFICATION'}\n\nStatus updated to: ${newStatus.toUpperCase()}\n\nName:        ${a.fullName}\nDepartment:  ${a.department}\nInstitution: ${a.institution}\nPeriod:      ${a.startDate} → ${a.endDate}\nSupervisor:  ${a.supervisor}\n\n${isT?'The attachee was terminated before completion.':'The attachee has successfully completed the attachment programme.'}\n\nAction by: ${c.sender||currentUser?.fullName}\nDate: ${new Date().toLocaleString('en-KE')}`;
+  const a   = enrichAttachee(DB.attachees.find(x => x.id === id));
+  const isT = newStatus === 'Terminated';
+  const subject = `${isT ? '⚠ URGENT: ' : ''}Attachee ${newStatus} — ${a.fullName}`;
+  const body = `Dear ${c.hodName || 'Head of ICT Department'},\n\n${isT ? '⚠ URGENT — ATTACHEE TERMINATED' : 'ATTACHEE COMPLETION NOTIFICATION'}\n\nStatus updated to: ${newStatus.toUpperCase()}\n\nName:        ${a.fullName}\nDepartment:  ${a.department}\nInstitution: ${a.institution}\nPeriod:      ${a.startDate} → ${a.endDate}\nSupervisor:  ${a.supervisor}\n\n${isT ? 'The attachee was terminated before completion.' : 'The attachee has successfully completed the attachment programme.'}\n\nAction by: ${c.sender || currentUser?.fullName}\nDate: ${new Date().toLocaleString('en-KE')}`;
   sendEmail(c.hod, subject, body);
 }
 
 // ─── CSV EXPORT ───────────────────────────────────────────────────────────────
 function exportCSV() {
   const rows = DB.attachees.map(enrichAttachee);
-  if (!rows.length) { showFlash('No data to export.','warning'); return; }
+  if (!rows.length) { showFlash('No data to export.', 'warning'); return; }
   const cols = ['id','fullName','gender','institution','course','yearOfStudy','department','supervisor','startDate','endDate','daysRemaining','status','phone','email','notes'];
-  const csv = [cols.join(','), ...rows.map(r=>cols.map(c=>`"${(r[c]??'').toString().replace(/"/g,'""')}"`).join(','))].join('\n');
-  const a = document.createElement('a');
-  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-  a.download = `attachees_${todayStr()}.csv`; a.click();
+  const csv  = [cols.join(','), ...rows.map(r => cols.map(c => `"${(r[c] ?? '').toString().replace(/"/g, '""')}"`).join(','))].join('\n');
+  const a    = document.createElement('a');
+  a.href     = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `attachees_${todayStr()}.csv`;
+  a.click();
   showFlash('CSV exported.');
 }
 
 // ─── MODAL ────────────────────────────────────────────────────────────────────
-function openModal()  { document.getElementById('modalOverlay').style.display='flex'; }
-function closeModal() { document.getElementById('modalOverlay').style.display='none'; }
+function openModal()  { document.getElementById('modalOverlay').style.display = 'flex'; }
+function closeModal() { document.getElementById('modalOverlay').style.display = 'none'; }
 
-
-// ─── PROFILE / CHANGE CREDENTIALS ────────────────────────────────────────────
-function loadProfilePage() {
-  document.getElementById('p_un').value  = currentUser.username || '';
-  document.getElementById('p_cp').value  = '';
-  document.getElementById('p_np').value  = '';
-  document.getElementById('p_cp2').value = '';
-  document.getElementById('profileFlash').innerHTML = '';
+// ─── CHANGE PASSWORD ──────────────────────────────────────────────────────────
+function openChangePasswordModal() {
+  document.getElementById('modalContent').innerHTML = `
+    <div class="modal-title">&#128273; Change Password <button class="modal-close" onclick="closeModal()">&#215;</button></div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Current Password <span class="req">*</span></label>
+      <input type="password" id="cp_current" placeholder="Enter your current password" style="width:100%;margin-top:4px">
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>New Password <span class="req">*</span></label>
+      <input type="password" id="cp_new" placeholder="At least 6 characters" style="width:100%;margin-top:4px">
+    </div>
+    <div class="form-group" style="margin-bottom:16px">
+      <label>Confirm New Password <span class="req">*</span></label>
+      <input type="password" id="cp_confirm" placeholder="Repeat new password" style="width:100%;margin-top:4px">
+    </div>
+    <div id="cp_flash"></div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="doChangePassword()">&#10003; Update Password</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>`;
+  openModal();
+  setTimeout(() => {
+    ['cp_current', 'cp_new', 'cp_confirm'].forEach(id => {
+      document.getElementById(id).addEventListener('keydown', e => {
+        if (e.key === 'Enter') doChangePassword();
+      });
+    });
+  }, 50);
 }
 
-async function doSaveProfile() {
-  const username   = document.getElementById('p_un').value.trim();
-  const currentPw  = document.getElementById('p_cp').value;
-  const newPw      = document.getElementById('p_np').value;
-  const confirmPw  = document.getElementById('p_cp2').value;
-  const flash      = document.getElementById('profileFlash');
-
-  if (!username) { flash.innerHTML = mkFlash('Username cannot be empty.', 'danger'); return; }
-  if (!currentPw) { flash.innerHTML = mkFlash('Please enter your current password to confirm.', 'danger'); return; }
-  if (newPw && newPw.length < 6) { flash.innerHTML = mkFlash('New password must be at least 6 characters.', 'danger'); return; }
-  if (newPw && newPw !== confirmPw) { flash.innerHTML = mkFlash('New passwords do not match.', 'danger'); return; }
-
+async function doChangePassword() {
+  const current = document.getElementById('cp_current').value;
+  const newPw   = document.getElementById('cp_new').value;
+  const confirm = document.getElementById('cp_confirm').value;
+  const flash   = document.getElementById('cp_flash');
+  if (!current || !newPw || !confirm) { flash.innerHTML = mkFlash('All fields are required.', 'danger'); return; }
+  if (newPw !== confirm)              { flash.innerHTML = mkFlash('New passwords do not match.', 'danger'); return; }
+  if (newPw.length < 6)              { flash.innerHTML = mkFlash('New password must be at least 6 characters.', 'danger'); return; }
   try {
-    const updated = await apiFetch('/api/me/profile', {
-      method: 'PUT',
-      body: { username, currentPassword: currentPw, newPassword: newPw || '' }
+    await apiFetch('/api/change-password', {
+      method: 'POST',
+      body:   { currentPassword: current, newPassword: newPw, confirmPassword: confirm },
     });
-    // Update local currentUser so nav reflects new username immediately
-    currentUser.username = updated.username;
-    document.getElementById('navName').textContent = updated.full_name || currentUser.fullName;
-    document.getElementById('p_cp').value  = '';
-    document.getElementById('p_np').value  = '';
-    document.getElementById('p_cp2').value = '';
-    flash.innerHTML = mkFlash('Credentials updated successfully. Use your new details next time you log in.');
-  } catch(e) {
+    closeModal();
+    showFlash('Password changed successfully.', 'success');
+  } catch (e) {
     flash.innerHTML = mkFlash(e.message, 'danger');
   }
 }
@@ -1523,4 +2032,4 @@ async function doSaveProfile() {
 tryAutoLogin();
 </script>
 </body>
-</html>
+</html>                                                                                                         

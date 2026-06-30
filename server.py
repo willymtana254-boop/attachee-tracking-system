@@ -11,13 +11,16 @@ from flask_jwt_extended import (
     JWTManager, create_access_token, jwt_required, get_jwt_identity
 )
 
-app = Flask(__name__, static_folder='.')
+# Always resolve paths relative to this file, not the working directory
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+app = Flask(__name__, static_folder=None)
 app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET', 'kilifi-ict-secret-2026-change-in-prod')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=12)
 CORS(app)
 jwt = JWTManager(app)
 
-DB_PATH = 'kilifi.db'
+DB_PATH = os.path.join(BASE_DIR, 'kilifi.db')
 
 # ─── DB HELPERS ───────────────────────────────────────────────────────────────
 
@@ -225,6 +228,7 @@ SEED_EVALUATIONS = [
 def init_db():
     with get_db() as conn:
         conn.executescript(SCHEMA)
+        # Only seed if tables are empty
         if conn.execute("SELECT COUNT(*) FROM departments").fetchone()[0] == 0:
             conn.executemany("INSERT OR IGNORE INTO departments(id,name,description) VALUES(?,?,?)", SEED_DEPARTMENTS)
             conn.executemany("INSERT OR IGNORE INTO institutions(id,name,type,county,contact,email) VALUES(?,?,?,?,?,?)", SEED_INSTITUTIONS)
@@ -232,19 +236,6 @@ def init_db():
             conn.executemany("INSERT OR IGNORE INTO users(id,username,full_name,email,password_hash,role) VALUES(?,?,?,?,?,?)", SEED_USERS)
             conn.executemany("INSERT OR IGNORE INTO attachees(id,first_name,last_name,id_number,gender,dob,phone,email,institution_id,course,year_of_study,reg_no,department_id,supervisor_id,start_date,end_date,status,notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", SEED_ATTACHEES)
             conn.executemany("INSERT OR IGNORE INTO evaluations(id,attachee_id,date,type,score,performance,attendance,technical_skills,communication,punctuality,team_work,remarks,evaluated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)", SEED_EVALUATIONS)
-        else:
-            # Always sync seed-user passwords so a stale DB never breaks login
-            for u in SEED_USERS:
-                uid, username, full_name, email, pw_hash, role = u
-                if conn.execute("SELECT id FROM users WHERE id=?", (uid,)).fetchone():
-                    conn.execute(
-                        "UPDATE users SET username=?, full_name=?, email=?, password_hash=?, role=? WHERE id=?",
-                        (username, full_name, email, pw_hash, role, uid)
-                    )
-                else:
-                    conn.execute(
-                        "INSERT OR IGNORE INTO users(id,username,full_name,email,password_hash,role) VALUES(?,?,?,?,?,?)", u
-                    )
         conn.commit()
 
 # ─── AUTH ──────────────────────────────────────────────────────────────────────
@@ -572,11 +563,54 @@ def delete_user(uid2):
         conn.commit()
     return jsonify(ok=True)
 
+# ─── CHANGE PASSWORD ──────────────────────────────────────────────────────────
+
+@app.route('/api/change-password', methods=['POST'])
+@jwt_required()
+def change_password():
+    uid = int(get_jwt_identity())
+    data = request.get_json() or {}
+    current = data.get('currentPassword') or ''
+    new_pw  = data.get('newPassword') or ''
+    confirm = data.get('confirmPassword') or ''
+
+    if not current or not new_pw or not confirm:
+        return jsonify(error='All fields are required'), 400
+    if new_pw != confirm:
+        return jsonify(error='New passwords do not match'), 400
+    if len(new_pw) < 6:
+        return jsonify(error='New password must be at least 6 characters'), 400
+
+    with get_db() as conn:
+        user = row_to_dict(conn.execute(
+            "SELECT * FROM users WHERE id=?", (uid,)
+        ).fetchone())
+        if not user or user['password_hash'] != hash_pass(current):
+            return jsonify(error='Current password is incorrect'), 401
+        conn.execute(
+            "UPDATE users SET password_hash=? WHERE id=?",
+            (hash_pass(new_pw), uid)
+        )
+        conn.commit()
+    return jsonify(ok=True, message='Password changed successfully')
+
 # ─── STATIC (serve the frontend HTML) ─────────────────────────────────────────
 
 @app.route('/')
 def index():
-    return send_from_directory('.', 'index.html')
+    return send_from_directory(BASE_DIR, 'index.html')
+
+@app.route('/styles.css')
+def styles():
+    return send_from_directory(BASE_DIR, 'styles.css')
+
+@app.route('/app.js')
+def appjs():
+    return send_from_directory(BASE_DIR, 'app.js')
+
+@app.route('/klf-logo.webp')
+def logo():
+    return send_from_directory(BASE_DIR, 'klf-logo.webp')
 
 # ─── MAIN ──────────────────────────────────────────────────────────────────────
 
@@ -585,10 +619,3 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print(f"\n✅  Kilifi ICT Attachee Server running → http://localhost:{port}\n")
     app.run(host='0.0.0.0', port=port, debug=False)
-
-
-
-
-
-
-
