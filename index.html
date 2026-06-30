@@ -28,7 +28,6 @@
   --gray-light:  #f1f5f9;
   --gray-mid:    #e2e8f0;
   --text:        #1e293b;
-  --orange:      #FFA500;
   --white:       #fff;
   --sidebar-w:   240px;
 }
@@ -46,7 +45,7 @@ button, input, select, textarea { font-family: inherit; }
 /* ─── SIDEBAR NAVIGATION ────────────────────────────────────────────────────── */
 .sidebar {
   background: var(--navy);
-  color: #FFA500;
+  color: #fff;
   width: var(--sidebar-w);
   height: 100vh;
   position: fixed;
@@ -1077,6 +1076,9 @@ async function startApp() {
   document.getElementById('addSupBtn').style.display   = adminOn ? '' : 'none';
   await loadAllData();
   showPage('dashboard');
+  if (currentUser.mustChangePassword) {
+    openForcedPasswordModal();
+  }
 }
 
 // ─── LOAD ALL DATA ────────────────────────────────────────────────────────────
@@ -2075,11 +2077,16 @@ function exportCSV() {
 }
 
 // ─── MODAL ────────────────────────────────────────────────────────────────────
+let forcedPasswordChange = false;
 function openModal()  { document.getElementById('modalOverlay').style.display = 'flex'; }
-function closeModal() { document.getElementById('modalOverlay').style.display = 'none'; }
+function closeModal() {
+  if (forcedPasswordChange) return; // block dismissal until password is changed
+  document.getElementById('modalOverlay').style.display = 'none';
+}
 
 // ─── CHANGE PASSWORD ──────────────────────────────────────────────────────────
 function openChangePasswordModal() {
+  forcedPasswordChange = false;
   document.getElementById('modalContent').innerHTML = `
     <div class="modal-title">&#128273; Change Password <button class="modal-close" onclick="closeModal()">&#215;</button></div>
     <div class="form-group" style="margin-bottom:12px">
@@ -2109,6 +2116,44 @@ function openChangePasswordModal() {
   }, 50);
 }
 
+// Forced version shown right after a first login (or admin-issued temp password).
+// Cannot be dismissed via the overlay, close button, or Escape — only by
+// successfully setting a new password.
+function openForcedPasswordModal() {
+  forcedPasswordChange = true;
+  document.getElementById('modalContent').innerHTML = `
+    <div class="modal-title">&#128274; Set a New Password</div>
+    <p style="font-size:13px;color:var(--gray);margin-bottom:16px;line-height:1.6">
+      For security, you must set a new password before continuing. This replaces the
+      temporary password you were given.
+    </p>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Current (Temporary) Password <span class="req">*</span></label>
+      <input type="password" id="cp_current" placeholder="Enter your current password" style="width:100%;margin-top:4px">
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>New Password <span class="req">*</span></label>
+      <input type="password" id="cp_new" placeholder="At least 6 characters" style="width:100%;margin-top:4px">
+    </div>
+    <div class="form-group" style="margin-bottom:16px">
+      <label>Confirm New Password <span class="req">*</span></label>
+      <input type="password" id="cp_confirm" placeholder="Repeat new password" style="width:100%;margin-top:4px">
+    </div>
+    <div id="cp_flash"></div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="doChangePassword()" style="width:100%;justify-content:center">&#10003; Set New Password &amp; Continue</button>
+    </div>`;
+  openModal();
+  setTimeout(() => {
+    ['cp_current', 'cp_new', 'cp_confirm'].forEach(id => {
+      document.getElementById(id).addEventListener('keydown', e => {
+        if (e.key === 'Enter') doChangePassword();
+      });
+    });
+    document.getElementById('cp_current').focus();
+  }, 50);
+}
+
 async function doChangePassword() {
   const current = document.getElementById('cp_current').value;
   const newPw   = document.getElementById('cp_new').value;
@@ -2117,17 +2162,26 @@ async function doChangePassword() {
   if (!current || !newPw || !confirm) { flash.innerHTML = mkFlash('All fields are required.', 'danger'); return; }
   if (newPw !== confirm)              { flash.innerHTML = mkFlash('New passwords do not match.', 'danger'); return; }
   if (newPw.length < 6)              { flash.innerHTML = mkFlash('New password must be at least 6 characters.', 'danger'); return; }
+  if (newPw === current)             { flash.innerHTML = mkFlash('New password must be different from your current password.', 'danger'); return; }
   try {
     await apiFetch('/api/change-password', {
       method: 'POST',
       body:   { currentPassword: current, newPassword: newPw, confirmPassword: confirm },
     });
-    closeModal();
-    showFlash('Password changed successfully.', 'success');
+    const wasForced = forcedPasswordChange;
+    forcedPasswordChange = false;
+    if (currentUser) currentUser.mustChangePassword = false;
+    document.getElementById('modalOverlay').style.display = 'none';
+    showFlash(wasForced ? 'Password set successfully. Welcome!' : 'Password changed successfully.', 'success');
   } catch (e) {
     flash.innerHTML = mkFlash(e.message, 'danger');
   }
 }
+
+// Block Escape-key dismissal while a forced password change is pending
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && forcedPasswordChange) e.stopImmediatePropagation();
+}, true);
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
 tryAutoLogin();
