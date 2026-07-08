@@ -3,7 +3,7 @@ Kilifi County ICT Attachee Tracking System — Backend API
 Run: python server.py
 """
 
-import sqlite3, hashlib, os, json
+import sqlite3, hashlib, os, json, secrets, time
 from datetime import timedelta
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
@@ -11,16 +11,32 @@ from flask_jwt_extended import (
     JWTManager, create_access_token, jwt_required, get_jwt_identity
 )
 
-# Always resolve paths relative to this file, not the working directory
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+app = Flask(__name__, static_folder='.')
 
-app = Flask(__name__, static_folder=None)
-app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET', 'kilifi-ict-secret-2026-change-in-prod')
+# Auto-generate a persistent JWT secret on first run
+_SECRET_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.jwt_secret')
+if os.environ.get('JWT_SECRET'):
+    _jwt_secret = os.environ['JWT_SECRET']
+elif os.path.exists(_SECRET_FILE):
+    with open(_SECRET_FILE) as _f: _jwt_secret = _f.read().strip()
+else:
+    _jwt_secret = secrets.token_hex(32)
+    with open(_SECRET_FILE, 'w') as _f: _f.write(_jwt_secret)
+
+app.config['JWT_SECRET_KEY'] = _jwt_secret
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=12)
 CORS(app)
 jwt = JWTManager(app)
 
-DB_PATH = os.path.join(BASE_DIR, 'kilifi.db')
+DB_PATH = os.environ.get('DB_PATH', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'kilifi.db'))
+
+# Login rate limiter: max 10 attempts per IP per minute
+_login_attempts: dict = {}
+def _check_rate_limit(ip):
+    now = time.time()
+    attempts = [t for t in _login_attempts.get(ip, []) if now - t < 60]
+    if len(attempts) >= 10: return False
+    attempts.append(now); _login_attempts[ip] = attempts; return True
 
 # ─── DB HELPERS ───────────────────────────────────────────────────────────────
 
@@ -31,6 +47,11 @@ def get_db():
     return conn
 
 def hash_pass(p):
+    """Salted SHA-256 — used for all new/updated passwords."""
+    return hashlib.sha256(f'kilifi2026{p}'.encode()).hexdigest()
+
+def hash_pass_legacy(p):
+    """Plain SHA-256 — matches old DB entries, auto-upgraded on login."""
     return hashlib.sha256(p.encode()).hexdigest()
 
 def row_to_dict(row):
@@ -38,6 +59,25 @@ def row_to_dict(row):
 
 def rows_to_list(rows):
     return [dict(r) for r in rows]
+
+def get_current_user(conn, uid):
+    """Fetch the calling user's role + supervisor_id for scoping checks."""
+    return row_to_dict(conn.execute(
+        "SELECT role, supervisor_id FROM users WHERE id=?", (uid,)).fetchone())
+
+def attachee_visible_to(conn, uid, aid):
+    """Return the attachee row if the current user is allowed to see it
+    (admins/viewers see all; supervisors only see their own), else None."""
+    user = get_current_user(conn, uid)
+    if not user:
+        return None
+    row = row_to_dict(conn.execute("SELECT * FROM attachees WHERE id=?", (aid,)).fetchone())
+    if not row:
+        return None
+    if user['role'] == 'supervisor' and user.get('supervisor_id'):
+        if row.get('supervisor_id') != user['supervisor_id']:
+            return None
+    return row
 
 # ─── SCHEMA + SEED ────────────────────────────────────────────────────────────
 
@@ -72,7 +112,9 @@ CREATE TABLE IF NOT EXISTS users (
     full_name TEXT NOT NULL,
     email TEXT DEFAULT '',
     password_hash TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'viewer'
+    role TEXT NOT NULL DEFAULT 'viewer',
+    supervisor_id INTEGER REFERENCES supervisors(id),
+    must_change_password INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS attachees (
@@ -82,7 +124,7 @@ CREATE TABLE IF NOT EXISTS attachees (
     id_number TEXT DEFAULT '',
     gender TEXT DEFAULT '',
     dob TEXT DEFAULT '',
-    phone TEXT DEFAULT '',
+    phone TEXT NOT NULL DEFAULT '',
     email TEXT DEFAULT '',
     institution_id INTEGER REFERENCES institutions(id),
     course TEXT DEFAULT '',
@@ -119,6 +161,16 @@ CREATE TABLE IF NOT EXISTS documents (
     file_name TEXT NOT NULL,
     issued_date TEXT DEFAULT '',
     notes TEXT DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS password_resets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL,
+    token TEXT NOT NULL UNIQUE,
+    temp_password TEXT DEFAULT '',
+    status TEXT DEFAULT 'pending',
+    created_at TEXT NOT NULL,
+    resolved_at TEXT DEFAULT ''
 );
 """
 
@@ -176,49 +228,50 @@ SEED_SUPERVISORS = [
     (19, 'Stanley', 16, 'ICT Officer', '', ''),
 ]
 
+# users: (id, username, full_name, email, password_hash, role, supervisor_id, must_change_password)
 SEED_USERS = [
-    (1,  'admin',   'System Administrator',  'admin@ict.local',              hash_pass('Admin@1234'), 'admin'),
-    (6,  'linus',   'Linus Tinga',           'linustinga254@gmail.com',       hash_pass('Pass@1234'), 'supervisor'),
-    (7,  'betty',   'Betty Mhache',          'b.mhache@kilifi.go.ke',         hash_pass('Pass@1234'), 'supervisor'),
-    (8,  'laban',   'Laban',                 '',                              hash_pass('Pass@1234'), 'supervisor'),
-    (9,  'michael', 'Michael Chando',        '',                              hash_pass('Pass@1234'), 'supervisor'),
-    (10, 'owen',    'Owen Kodi',             '',                              hash_pass('Pass@1234'), 'supervisor'),
-    (11, 'emily',   'Emily Dama',            '',                              hash_pass('Pass@1234'), 'supervisor'),
-    (12, 'sharon',  'Sharon Oloo',           '',                              hash_pass('Pass@1234'), 'supervisor'),
-    (13, 'jemimah', 'Jemimah Idza',         '',                              hash_pass('Pass@1234'), 'supervisor'),
-    (14, 'bethwel', 'Bethwel Sanga',        '',                              hash_pass('Pass@1234'), 'supervisor'),
-    (15, 'junior',  'Junior Mbogo',          '',                              hash_pass('Pass@1234'), 'supervisor'),
+    (1,  'admin',   'System Administrator',  'admin@ict.local',              hash_pass('Admin@1234'), 'admin',      None, 0),
+    (6,  'linus',   'Linus Tinga',           'linustinga254@gmail.com',       hash_pass('Pass@1234'), 'supervisor', 6, 1),
+    (7,  'betty',   'Betty Mhache',          'b.mhache@kilifi.go.ke',         hash_pass('Pass@1234'), 'supervisor', 7, 1),
+    (8,  'laban',   'Laban',                 '',                              hash_pass('Pass@1234'), 'supervisor', 8, 1),
+    (9,  'michael', 'Michael Chando',        '',                              hash_pass('Pass@1234'), 'supervisor', 9, 1),
+    (10, 'owen',    'Owen Kodi',             '',                              hash_pass('Pass@1234'), 'supervisor', 10, 1),
+    (11, 'emily',   'Emily Dama',            '',                              hash_pass('Pass@1234'), 'supervisor', 11, 1),
+    (12, 'sharon',  'Sharon Oloo',           '',                              hash_pass('Pass@1234'), 'supervisor', 12, 1),
+    (13, 'jemimah', 'Jemimah Idza',         '',                              hash_pass('Pass@1234'), 'supervisor', 13, 1),
+    (14, 'bethwel', 'Bethwel Sanga',        '',                              hash_pass('Pass@1234'), 'supervisor', 14, 1),
+    (15, 'junior',  'Junior Mbogo',          '',                              hash_pass('Pass@1234'), 'supervisor', 15, 1),
 ]
 
 SEED_ATTACHEES = [
     (6, 'William','Saidi','40652223','Male','2003-04-05','0716168180','willymtana254@gmail.com',5,'Computer Science',3,'COM/014/23',3,6,'2026-05-19','2026-07-31','Active','Committed'),
     (7, 'Joseph','Mwangaza','41285293','Male','2003-01-31','0792918456','josephmwangaza1@gmail.com',6,'Bachelor of Science Information Communication and Technology',4,'SC/ICT/1274/22',3,6,'2026-05-11','2026-08-11','Active','Committed'),
     (8, 'Isaac','Mwangi','41989457','Male','','0714207777','',2,'Bachelor of Science in Computer Science',3,'',3,6,'2026-05-26','2026-08-31','Active',''),
-    (9, 'Samini','Kenga','39161218','Male','','','',3,'Diploma in Information Communication Technology',None,'',4,7,'2026-05-21','2026-08-21','Active',''),
-    (10,'Paul','Wanjiku','29997641','Male','','','',2,'Diploma in ICT',2,'',6,8,'2026-06-08','2026-09-04','Active',''),
-    (11,'Khalid','Swaleh','','Male','','','',7,'Bachelor of Science in Computer Science',3,'',7,9,'2026-05-11','2026-08-14','Active',''),
-    (12,'Gladys','Salama','','Female','','','',3,'Diploma in Information Communication Technology',3,'',6,10,'2026-05-11','2026-08-14','Active',''),
-    (13,'Amina','Rashid','','Female','','','',8,'Certificate in Information & Communication Technology',2,'',8,11,'2026-05-11','2026-07-31','Active',''),
-    (14,'Sidi','Kahindi','','Female','','','',9,'Public Works',3,'',9,12,'2026-06-02','2026-08-28','Active',''),
-    (15,'Victor','Mutembei','','Male','','','',10,'Bachelor of Science in IT',3,'',9,12,'2026-06-02','2026-08-28','Active',''),
-    (16,'Salome','Kitsao','131933865','Female','','','',11,'Certificate in Information Communication and Technology',2,'',6,13,'2026-05-04','2026-07-31','Active',''),
-    (17,'Jimmy','Safari','','Male','','','',12,'Degree in Software Engineering',3,'',10,14,'2026-05-05','2026-08-07','Active',''),
-    (18,'Santa','Nyamawi','','Female','','','',13,'Diploma in Information and Communication Technology',2,'',8,11,'2026-05-05','2026-08-07','Active',''),
-    (19,'George','Kesi','42463818','Male','','','',14,'Bachelor of Science in Computer Science',3,'',11,7,'2026-05-04','2026-07-31','Active',''),
-    (20,'Grace','Wema','42522263','Female','','','',2,'Bachelor of Science in Computer Science',3,'',12,15,'2026-05-11','2026-08-15','Active',''),
-    (21,'Festus','Matsitsa','42473499','Male','','','',2,'Bachelor of Science in Computer Science',3,'',10,14,'2026-05-11','2026-08-15','Active',''),
-    (22,'Khamis Athman','Athman','3989272767','Male','','','',12,'Bachelor of Business Information Technology',3,'',13,16,'2026-04-06','2026-08-21','Active',''),
-    (23,'Vicent','Kimathi','','','','','',15,'Diploma in ICT',2,'',7,9,'2026-05-08','2026-08-07','Active',''),
-    (24,'Vicent','Odhiambo','42221117','Male','','','',2,'Bachelor of Science in Computer Science',3,'',14,17,'2026-05-11','2026-08-15','Active',''),
-    (25,'Steve','Mayaka','42803982','Male','','','',2,'Bachelor of Science in Computer Science',3,'',14,17,'2026-05-11','2026-08-15','Active',''),
-    (26,'Edgar','Majaliwa','40080855','Male','','','',16,'Certificate in ICT',2,'',8,11,'2026-03-23','2026-05-29','Active',''),
-    (27,'Maxwel','Kazungu','42607891','Male','','','',16,'Certificate in ICT',2,'',6,10,'2026-03-02','2026-05-29','Active',''),
-    (28,'Monica','Ngumbao','41046899','Female','','','',3,'Diploma in ICT',2,'',6,10,'2026-01-26','2026-04-25','Active',''),
-    (29,'Eunice','Kwekwe','41611887','Female','','','',15,'Artisan in ICT',2,'',15,18,'2026-01-26','2026-04-24','Active',''),
-    (30,'Sarah','Francis','','Female','','','',17,'Diploma in ICT',2,'',6,8,'2026-01-21','2026-04-20','Active',''),
-    (31,'Angela','John','42526800','Female','','','',16,'Certificate in ICT',2,'',16,19,'2026-01-19','2026-04-17','Active',''),
-    (32,'Rehema','Mwambire','','','','','',18,'Certificate in ICT',2,'',10,14,'2026-01-14','2026-04-12','Active',''),
-    (33,'Ian','Chivatsi','39915619','Male','','','',19,'Bachelor of Science in Computer Science',4,'',6,13,'2026-01-08','2026-04-10','Active',''),
+    (9, 'Samini','Kenga','39161218','Male','','0700000009','',3,'Diploma in Information Communication Technology',None,'',4,7,'2026-05-21','2026-08-21','Active',''),
+    (10,'Paul','Wanjiku','29997641','Male','','0700000010','',2,'Diploma in ICT',2,'',6,8,'2026-06-08','2026-09-04','Active',''),
+    (11,'Khalid','Swaleh','','Male','','0700000011','',7,'Bachelor of Science in Computer Science',3,'',7,9,'2026-05-11','2026-08-14','Active',''),
+    (12,'Gladys','Salama','','Female','','0700000012','',3,'Diploma in Information Communication Technology',3,'',6,10,'2026-05-11','2026-08-14','Active',''),
+    (13,'Amina','Rashid','','Female','','0700000013','',8,'Certificate in Information & Communication Technology',2,'',8,11,'2026-05-11','2026-07-31','Active',''),
+    (14,'Sidi','Kahindi','','Female','','0700000014','',9,'Public Works',3,'',9,12,'2026-06-02','2026-08-28','Active',''),
+    (15,'Victor','Mutembei','','Male','','0700000015','',10,'Bachelor of Science in IT',3,'',9,12,'2026-06-02','2026-08-28','Active',''),
+    (16,'Salome','Kitsao','131933865','Female','','0700000016','',11,'Certificate in Information Communication and Technology',2,'',6,13,'2026-05-04','2026-07-31','Active',''),
+    (17,'Jimmy','Safari','','Male','','0700000017','',12,'Degree in Software Engineering',3,'',10,14,'2026-05-05','2026-08-07','Active',''),
+    (18,'Santa','Nyamawi','','Female','','0700000018','',13,'Diploma in Information and Communication Technology',2,'',8,11,'2026-05-05','2026-08-07','Active',''),
+    (19,'George','Kesi','42463818','Male','','0700000019','',14,'Bachelor of Science in Computer Science',3,'',11,7,'2026-05-04','2026-07-31','Active',''),
+    (20,'Grace','Wema','42522263','Female','','0700000020','',2,'Bachelor of Science in Computer Science',3,'',12,15,'2026-05-11','2026-08-15','Active',''),
+    (21,'Festus','Matsitsa','42473499','Male','','0700000021','',2,'Bachelor of Science in Computer Science',3,'',10,14,'2026-05-11','2026-08-15','Active',''),
+    (22,'Khamis Athman','Athman','3989272767','Male','','0700000022','',12,'Bachelor of Business Information Technology',3,'',13,16,'2026-04-06','2026-08-21','Active',''),
+    (23,'Vicent','Kimathi','','','','0700000023','',15,'Diploma in ICT',2,'',7,9,'2026-05-08','2026-08-07','Active',''),
+    (24,'Vicent','Odhiambo','42221117','Male','','0700000024','',2,'Bachelor of Science in Computer Science',3,'',14,17,'2026-05-11','2026-08-15','Active',''),
+    (25,'Steve','Mayaka','42803982','Male','','0700000025','',2,'Bachelor of Science in Computer Science',3,'',14,17,'2026-05-11','2026-08-15','Active',''),
+    (26,'Edgar','Majaliwa','40080855','Male','','0700000026','',16,'Certificate in ICT',2,'',8,11,'2026-03-23','2026-05-29','Active',''),
+    (27,'Maxwel','Kazungu','42607891','Male','','0700000027','',16,'Certificate in ICT',2,'',6,10,'2026-03-02','2026-05-29','Active',''),
+    (28,'Monica','Ngumbao','41046899','Female','','0700000028','',3,'Diploma in ICT',2,'',6,10,'2026-01-26','2026-04-25','Active',''),
+    (29,'Eunice','Kwekwe','41611887','Female','','0700000029','',15,'Artisan in ICT',2,'',15,18,'2026-01-26','2026-04-24','Active',''),
+    (30,'Sarah','Francis','','Female','','0700000030','',17,'Diploma in ICT',2,'',6,8,'2026-01-21','2026-04-20','Active',''),
+    (31,'Angela','John','42526800','Female','','0700000031','',16,'Certificate in ICT',2,'',16,19,'2026-01-19','2026-04-17','Active',''),
+    (32,'Rehema','Mwambire','','','','0700000032','',18,'Certificate in ICT',2,'',10,14,'2026-01-14','2026-04-12','Active',''),
+    (33,'Ian','Chivatsi','39915619','Male','','0700000033','',19,'Bachelor of Science in Computer Science',4,'',6,13,'2026-01-08','2026-04-10','Active',''),
 ]
 
 SEED_EVALUATIONS = [
@@ -228,34 +281,81 @@ SEED_EVALUATIONS = [
 def init_db():
     with get_db() as conn:
         conn.executescript(SCHEMA)
-        # Only seed if tables are empty
-        if conn.execute("SELECT COUNT(*) FROM departments").fetchone()[0] == 0:
+        # Add columns to existing DBs that predate this version
+        try:
+            conn.execute("ALTER TABLE users ADD COLUMN supervisor_id INTEGER REFERENCES supervisors(id)")
+            conn.commit()
+        except Exception:
+            pass  # column already exists
+        try:
+            conn.execute("ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0")
+            conn.commit()
+        except Exception:
+            pass  # column already exists
+        fresh = conn.execute("SELECT COUNT(*) FROM departments").fetchone()[0] == 0
+        if fresh:
             conn.executemany("INSERT OR IGNORE INTO departments(id,name,description) VALUES(?,?,?)", SEED_DEPARTMENTS)
             conn.executemany("INSERT OR IGNORE INTO institutions(id,name,type,county,contact,email) VALUES(?,?,?,?,?,?)", SEED_INSTITUTIONS)
             conn.executemany("INSERT OR IGNORE INTO supervisors(id,name,department_id,job_title,phone,email) VALUES(?,?,?,?,?,?)", SEED_SUPERVISORS)
-            conn.executemany("INSERT OR IGNORE INTO users(id,username,full_name,email,password_hash,role) VALUES(?,?,?,?,?,?)", SEED_USERS)
+            conn.executemany("INSERT OR IGNORE INTO users(id,username,full_name,email,password_hash,role,supervisor_id,must_change_password) VALUES(?,?,?,?,?,?,?,?)", SEED_USERS)
             conn.executemany("INSERT OR IGNORE INTO attachees(id,first_name,last_name,id_number,gender,dob,phone,email,institution_id,course,year_of_study,reg_no,department_id,supervisor_id,start_date,end_date,status,notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", SEED_ATTACHEES)
             conn.executemany("INSERT OR IGNORE INTO evaluations(id,attachee_id,date,type,score,performance,attendance,technical_skills,communication,punctuality,team_work,remarks,evaluated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)", SEED_EVALUATIONS)
+        else:
+            # Only INSERT brand-new seed users (e.g. a supervisor added in a later code update).
+            # Never overwrite an existing user's password_hash or must_change_password flag —
+            # doing so on every restart would wipe out a supervisor's own password change and
+            # force them to change it again forever.
+            for u in SEED_USERS:
+                uid, username, full_name, email, pw_hash, role, sup_id, must_change = u
+                existing = conn.execute("SELECT id FROM users WHERE id=?", (uid,)).fetchone()
+                if existing:
+                    # Keep credentials/flag as-is; only patch non-sensitive profile fields
+                    # in case names/emails/roles changed in code, without touching the password.
+                    conn.execute(
+                        "UPDATE users SET username=?,full_name=?,role=?,supervisor_id=? WHERE id=?",
+                        (username, full_name, role, sup_id, uid)
+                    )
+                else:
+                    conn.execute(
+                        "INSERT OR IGNORE INTO users(id,username,full_name,email,password_hash,role,supervisor_id,must_change_password) VALUES(?,?,?,?,?,?,?,?)", u
+                    )
+            # Backfill missing phone numbers on existing rows (NOT NULL safety net for legacy DBs)
+            conn.execute("UPDATE attachees SET phone='0700000000' WHERE phone IS NULL OR TRIM(phone)=''")
         conn.commit()
 
 # ─── AUTH ──────────────────────────────────────────────────────────────────────
 
 @app.route('/api/login', methods=['POST'])
 def login():
-    data = request.get_json()
+    ip = request.remote_addr
+    if not _check_rate_limit(ip):
+        return jsonify(error='Too many login attempts. Please wait 1 minute.'), 429
+    data = request.get_json() or {}
     username = (data.get('username') or '').strip()
     password = data.get('password') or ''
+    if not username or not password:
+        return jsonify(error='Username and password are required'), 400
     with get_db() as conn:
         user = row_to_dict(conn.execute(
             "SELECT * FROM users WHERE username=?", (username,)
         ).fetchone())
-    if not user or user['password_hash'] != hash_pass(password):
-        return jsonify(error='Invalid username or password'), 401
-    token = create_access_token(identity=str(user['id']))
-    return jsonify(token=token, user={
-        'id': user['id'], 'username': user['username'],
-        'fullName': user['full_name'], 'email': user['email'], 'role': user['role']
-    })
+        if user:
+            salted = hash_pass(password)
+            legacy = hash_pass_legacy(password)
+            if user['password_hash'] in (salted, legacy):
+                if user['password_hash'] == legacy:
+                    # Auto-upgrade to salted hash
+                    conn.execute("UPDATE users SET password_hash=? WHERE id=?", (salted, user['id']))
+                    conn.commit()
+                token = create_access_token(identity=str(user['id']))
+                return jsonify(token=token, user={
+                    'id': user['id'], 'username': user['username'],
+                    'fullName': user['full_name'], 'email': user['email'],
+                    'role': user['role'],
+                    'supervisorId': user.get('supervisor_id'),
+                    'mustChangePassword': bool(user.get('must_change_password'))
+                })
+    return jsonify(error='Invalid username or password'), 401
 
 @app.route('/api/me', methods=['GET'])
 @jwt_required()
@@ -265,7 +365,62 @@ def me():
         user = row_to_dict(conn.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone())
     if not user: return jsonify(error='Not found'), 404
     return jsonify(id=user['id'], username=user['username'], fullName=user['full_name'],
-                   email=user['email'], role=user['role'])
+                   email=user['email'], role=user['role'],
+                   supervisorId=user.get('supervisor_id'),
+                   mustChangePassword=bool(user.get('must_change_password')))
+
+@app.route('/api/me/profile', methods=['PUT'])
+@jwt_required()
+def update_profile():
+    uid = int(get_jwt_identity())
+    d = request.get_json() or {}
+    username  = (d.get('username') or '').strip()
+    current_pw = d.get('currentPassword') or ''
+    new_pw     = d.get('newPassword') or ''
+    if not username:
+        return jsonify(error='Username cannot be empty'), 400
+    if not current_pw:
+        return jsonify(error='Current password is required to confirm changes'), 400
+    with get_db() as conn:
+        user = row_to_dict(conn.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone())
+        if not user: return jsonify(error='User not found'), 404
+        if user['password_hash'] not in (hash_pass(current_pw), hash_pass_legacy(current_pw)):
+            return jsonify(error='Current password is incorrect'), 401
+        taken = row_to_dict(conn.execute(
+            "SELECT id FROM users WHERE username=? AND id!=?", (username, uid)).fetchone())
+        if taken: return jsonify(error='Username already taken by another user'), 409
+        if new_pw:
+            if len(new_pw) < 6:
+                return jsonify(error='New password must be at least 6 characters'), 400
+            conn.execute("UPDATE users SET username=?, password_hash=?, must_change_password=0 WHERE id=?",
+                         (username, hash_pass(new_pw), uid))
+        else:
+            conn.execute("UPDATE users SET username=? WHERE id=?", (username, uid))
+        conn.commit()
+        updated = row_to_dict(conn.execute(
+            "SELECT id,username,full_name,email,role,supervisor_id FROM users WHERE id=?", (uid,)).fetchone())
+    return jsonify(updated)
+
+@app.route('/api/change-password', methods=['POST'])
+@jwt_required()
+def change_password():
+    uid = int(get_jwt_identity())
+    d = request.get_json() or {}
+    current_pw = d.get('currentPassword') or ''
+    new_pw     = d.get('newPassword') or ''
+    if not current_pw or not new_pw:
+        return jsonify(error='Both current and new password are required'), 400
+    if len(new_pw) < 6:
+        return jsonify(error='New password must be at least 6 characters'), 400
+    with get_db() as conn:
+        user = row_to_dict(conn.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone())
+        if not user: return jsonify(error='User not found'), 404
+        if user['password_hash'] not in (hash_pass(current_pw), hash_pass_legacy(current_pw)):
+            return jsonify(error='Current password is incorrect'), 401
+        conn.execute("UPDATE users SET password_hash=?, must_change_password=0 WHERE id=?", (hash_pass(new_pw), uid))
+        conn.commit()
+    return jsonify(ok=True, message='Password changed successfully')
+
 
 # ─── DEPARTMENTS ───────────────────────────────────────────────────────────────
 
@@ -397,28 +552,52 @@ def delete_supervisor(sid):
 @app.route('/api/attachees', methods=['GET'])
 @jwt_required()
 def get_attachees():
+    from datetime import date
+    today = date.today().isoformat()
+    uid = int(get_jwt_identity())
     with get_db() as conn:
-        rows = rows_to_list(conn.execute("SELECT * FROM attachees ORDER BY first_name,last_name").fetchall())
+        # Auto-update expired/re-activated attachee status
+        conn.execute("UPDATE attachees SET status='Completed' WHERE end_date < ? AND status='Active'", (today,))
+        conn.execute("UPDATE attachees SET status='Active' WHERE end_date >= ? AND start_date <= ? AND status='Completed'", (today, today))
+        conn.commit()
+        user = row_to_dict(conn.execute("SELECT role, supervisor_id FROM users WHERE id=?", (uid,)).fetchone())
+        # Supervisors only see their own attachees; admins see all
+        if user['role'] == 'supervisor' and user.get('supervisor_id'):
+            rows = rows_to_list(conn.execute(
+                "SELECT * FROM attachees WHERE supervisor_id=? ORDER BY first_name,last_name",
+                (user['supervisor_id'],)).fetchall())
+        else:
+            rows = rows_to_list(conn.execute(
+                "SELECT * FROM attachees ORDER BY first_name,last_name").fetchall())
     return jsonify(rows)
 
 @app.route('/api/attachees', methods=['POST'])
 @jwt_required()
 def add_attachee():
+    uid = int(get_jwt_identity())
     d = request.get_json()
     fn = (d.get('firstName') or '').strip()
     ln = (d.get('lastName') or '').strip()
+    phone = (d.get('phone') or '').strip()
     if not fn or not ln or not d.get('startDate') or not d.get('endDate'):
         return jsonify(error='First name, last name, start and end date are required'), 400
+    if not phone:
+        return jsonify(error='Phone number is required'), 400
     with get_db() as conn:
+        me = get_current_user(conn, uid)
+        supervisor_id = d.get('supervisorId')
+        # Supervisors can only ever create attachees assigned to themselves
+        if me and me['role'] == 'supervisor' and me.get('supervisor_id'):
+            supervisor_id = me['supervisor_id']
         cur = conn.execute("""
-            INSERT INTO attachees(first_name,last_name,id_number,gender,dob,phone,email,
+            INSERT INTO attachees(first_name,last_name,gender,dob,phone,email,
             institution_id,course,year_of_study,reg_no,department_id,supervisor_id,
             start_date,end_date,status,notes)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (fn, ln, d.get('idNumber',''), d.get('gender',''), d.get('dob',''),
-             d.get('phone',''), d.get('email',''), d.get('institutionId'),
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (fn, ln, d.get('gender',''), d.get('dob',''),
+             phone, d.get('email',''), d.get('institutionId'),
              d.get('course',''), d.get('yearOfStudy'), d.get('regNo',''),
-             d.get('departmentId'), d.get('supervisorId'),
+             d.get('departmentId'), supervisor_id,
              d['startDate'], d['endDate'], d.get('status','Active'), d.get('notes','')))
         conn.commit()
         row = row_to_dict(conn.execute("SELECT * FROM attachees WHERE id=?", (cur.lastrowid,)).fetchone())
@@ -427,28 +606,38 @@ def add_attachee():
 @app.route('/api/attachees/<int:aid>', methods=['GET'])
 @jwt_required()
 def get_attachee(aid):
+    uid = int(get_jwt_identity())
     with get_db() as conn:
-        row = row_to_dict(conn.execute("SELECT * FROM attachees WHERE id=?", (aid,)).fetchone())
+        row = attachee_visible_to(conn, uid, aid)
     if not row: return jsonify(error='Not found'), 404
     return jsonify(row)
 
 @app.route('/api/attachees/<int:aid>', methods=['PUT'])
 @jwt_required()
 def update_attachee(aid):
+    uid = int(get_jwt_identity())
     d = request.get_json()
     fn = (d.get('firstName') or '').strip()
     ln = (d.get('lastName') or '').strip()
+    phone = (d.get('phone') or '').strip()
     if not fn or not ln: return jsonify(error='Name required'), 400
+    if not phone: return jsonify(error='Phone number is required'), 400
     with get_db() as conn:
+        if not attachee_visible_to(conn, uid, aid):
+            return jsonify(error='Not found'), 404
+        me = get_current_user(conn, uid)
+        supervisor_id = d.get('supervisorId')
+        if me and me['role'] == 'supervisor' and me.get('supervisor_id'):
+            supervisor_id = me['supervisor_id']
         conn.execute("""
-            UPDATE attachees SET first_name=?,last_name=?,id_number=?,gender=?,dob=?,
+            UPDATE attachees SET first_name=?,last_name=?,gender=?,dob=?,
             phone=?,email=?,institution_id=?,course=?,year_of_study=?,reg_no=?,
             department_id=?,supervisor_id=?,start_date=?,end_date=?,status=?,notes=?
             WHERE id=?""",
-            (fn, ln, d.get('idNumber',''), d.get('gender',''), d.get('dob',''),
-             d.get('phone',''), d.get('email',''), d.get('institutionId'),
+            (fn, ln, d.get('gender',''), d.get('dob',''),
+             phone, d.get('email',''), d.get('institutionId'),
              d.get('course',''), d.get('yearOfStudy'), d.get('regNo',''),
-             d.get('departmentId'), d.get('supervisorId'),
+             d.get('departmentId'), supervisor_id,
              d.get('startDate'), d.get('endDate'), d.get('status','Active'), d.get('notes',''), aid))
         conn.commit()
         row = row_to_dict(conn.execute("SELECT * FROM attachees WHERE id=?", (aid,)).fetchone())
@@ -457,7 +646,11 @@ def update_attachee(aid):
 @app.route('/api/attachees/<int:aid>', methods=['DELETE'])
 @jwt_required()
 def delete_attachee(aid):
+    uid = int(get_jwt_identity())
     with get_db() as conn:
+        me = get_current_user(conn, uid)
+        if not me or me['role'] != 'admin':
+            return jsonify(error='Forbidden'), 403
         conn.execute("DELETE FROM attachees WHERE id=?", (aid,))
         conn.commit()
     return jsonify(ok=True)
@@ -467,7 +660,10 @@ def delete_attachee(aid):
 @app.route('/api/attachees/<int:aid>/evaluations', methods=['GET'])
 @jwt_required()
 def get_evals(aid):
+    uid = int(get_jwt_identity())
     with get_db() as conn:
+        if not attachee_visible_to(conn, uid, aid):
+            return jsonify(error='Not found'), 404
         rows = rows_to_list(conn.execute(
             "SELECT * FROM evaluations WHERE attachee_id=? ORDER BY date DESC", (aid,)).fetchall())
     return jsonify(rows)
@@ -475,8 +671,11 @@ def get_evals(aid):
 @app.route('/api/attachees/<int:aid>/evaluations', methods=['POST'])
 @jwt_required()
 def add_eval(aid):
+    uid = int(get_jwt_identity())
     d = request.get_json()
     with get_db() as conn:
+        if not attachee_visible_to(conn, uid, aid):
+            return jsonify(error='Not found'), 404
         cur = conn.execute("""
             INSERT INTO evaluations(attachee_id,date,type,score,performance,attendance,
             technical_skills,communication,punctuality,team_work,remarks,evaluated_by)
@@ -490,12 +689,46 @@ def add_eval(aid):
         row = row_to_dict(conn.execute("SELECT * FROM evaluations WHERE id=?", (cur.lastrowid,)).fetchone())
     return jsonify(row), 201
 
+@app.route('/api/attachees/<int:aid>/evaluations/<int:eid>', methods=['PUT'])
+@jwt_required()
+def update_eval(aid, eid):
+    uid = int(get_jwt_identity())
+    d = request.get_json()
+    with get_db() as conn:
+        if not attachee_visible_to(conn, uid, aid):
+            return jsonify(error='Not found'), 404
+        conn.execute("""UPDATE evaluations SET date=?,type=?,score=?,performance=?,attendance=?,
+            technical_skills=?,communication=?,punctuality=?,team_work=?,remarks=?,evaluated_by=?
+            WHERE id=? AND attachee_id=?""",
+            (d.get('date'), d.get('type','Monthly'), d.get('score',0),
+             d.get('performance','Good'), d.get('attendance',100),
+             d.get('technicalSkills',''), d.get('communication',''),
+             d.get('punctuality',''), d.get('teamWork',''),
+             d.get('remarks',''), d.get('evaluatedBy'), eid, aid))
+        conn.commit()
+        row = row_to_dict(conn.execute("SELECT * FROM evaluations WHERE id=?", (eid,)).fetchone())
+    return jsonify(row)
+
+@app.route('/api/attachees/<int:aid>/evaluations/<int:eid>', methods=['DELETE'])
+@jwt_required()
+def delete_eval(aid, eid):
+    uid = int(get_jwt_identity())
+    with get_db() as conn:
+        if not attachee_visible_to(conn, uid, aid):
+            return jsonify(error='Not found'), 404
+        conn.execute("DELETE FROM evaluations WHERE id=? AND attachee_id=?", (eid, aid))
+        conn.commit()
+    return jsonify(ok=True)
+
 # ─── DOCUMENTS ─────────────────────────────────────────────────────────────────
 
 @app.route('/api/attachees/<int:aid>/documents', methods=['GET'])
 @jwt_required()
 def get_docs(aid):
+    uid = int(get_jwt_identity())
     with get_db() as conn:
+        if not attachee_visible_to(conn, uid, aid):
+            return jsonify(error='Not found'), 404
         rows = rows_to_list(conn.execute(
             "SELECT * FROM documents WHERE attachee_id=? ORDER BY issued_date DESC", (aid,)).fetchall())
     return jsonify(rows)
@@ -503,10 +736,13 @@ def get_docs(aid):
 @app.route('/api/attachees/<int:aid>/documents', methods=['POST'])
 @jwt_required()
 def add_doc(aid):
+    uid = int(get_jwt_identity())
     d = request.get_json()
     name = (d.get('fileName') or '').strip()
     if not name: return jsonify(error='File name required'), 400
     with get_db() as conn:
+        if not attachee_visible_to(conn, uid, aid):
+            return jsonify(error='Not found'), 404
         cur = conn.execute(
             "INSERT INTO documents(attachee_id,doc_type,file_name,issued_date,notes) VALUES(?,?,?,?,?)",
             (aid, d.get('docType',''), name, d.get('issuedDate',''), d.get('notes','')))
@@ -542,7 +778,7 @@ def add_user():
             return jsonify(error='Username, name and password required'), 400
         try:
             cur = conn.execute(
-                "INSERT INTO users(username,full_name,email,password_hash,role) VALUES(?,?,?,?,?)",
+                "INSERT INTO users(username,full_name,email,password_hash,role,must_change_password) VALUES(?,?,?,?,?,1)",
                 (username, full_name, d.get('email',''), hash_pass(password), d.get('role','viewer')))
             conn.commit()
             row = row_to_dict(conn.execute(
@@ -563,59 +799,101 @@ def delete_user(uid2):
         conn.commit()
     return jsonify(ok=True)
 
-# ─── CHANGE PASSWORD ──────────────────────────────────────────────────────────
+# ─── FORGOT PASSWORD ──────────────────────────────────────────────────────────
 
-@app.route('/api/change-password', methods=['POST'])
-@jwt_required()
-def change_password():
-    uid = int(get_jwt_identity())
-    data = request.get_json() or {}
-    current = data.get('currentPassword') or ''
-    new_pw  = data.get('newPassword') or ''
-    confirm = data.get('confirmPassword') or ''
-
-    if not current or not new_pw or not confirm:
-        return jsonify(error='All fields are required'), 400
-    if new_pw != confirm:
-        return jsonify(error='New passwords do not match'), 400
-    if len(new_pw) < 6:
-        return jsonify(error='New password must be at least 6 characters'), 400
-
+@app.route('/api/forgot-password', methods=['POST'])
+def forgot_password():
+    """User submits their username to request a password reset."""
+    from datetime import datetime
+    d = request.get_json() or {}
+    username = (d.get('username') or '').strip()
+    if not username:
+        return jsonify(error='Username is required'), 400
     with get_db() as conn:
         user = row_to_dict(conn.execute(
-            "SELECT * FROM users WHERE id=?", (uid,)
-        ).fetchone())
-        if not user or user['password_hash'] != hash_pass(current):
-            return jsonify(error='Current password is incorrect'), 401
+            "SELECT id FROM users WHERE username=?", (username,)).fetchone())
+        if not user:
+            # Don't reveal whether username exists
+            return jsonify(ok=True, message='If that username exists, a reset request has been submitted.')
+        # Check for existing pending request
+        existing = conn.execute(
+            "SELECT id FROM password_resets WHERE username=? AND status='pending'", (username,)).fetchone()
+        if existing:
+            return jsonify(ok=True, message='A reset request is already pending. Please contact your admin.')
+        token = secrets.token_hex(16)
         conn.execute(
-            "UPDATE users SET password_hash=? WHERE id=?",
-            (hash_pass(new_pw), uid)
-        )
+            "INSERT INTO password_resets(username, token, status, created_at) VALUES(?,?,'pending',?)",
+            (username, token, datetime.now().isoformat()))
         conn.commit()
-    return jsonify(ok=True, message='Password changed successfully')
+    return jsonify(ok=True, message='Reset request submitted. Please contact your admin to approve it.')
+
+@app.route('/api/forgot-password/requests', methods=['GET'])
+@jwt_required()
+def get_reset_requests():
+    """Admin: list all pending reset requests."""
+    uid = int(get_jwt_identity())
+    with get_db() as conn:
+        me = row_to_dict(conn.execute("SELECT role FROM users WHERE id=?", (uid,)).fetchone())
+        if me['role'] != 'admin':
+            return jsonify(error='Forbidden'), 403
+        rows = rows_to_list(conn.execute(
+            "SELECT * FROM password_resets ORDER BY created_at DESC").fetchall())
+    return jsonify(rows)
+
+@app.route('/api/forgot-password/resolve/<int:rid>', methods=['POST'])
+@jwt_required()
+def resolve_reset(rid):
+    """Admin: approve a reset request and set a temporary password."""
+    from datetime import datetime
+    uid = int(get_jwt_identity())
+    with get_db() as conn:
+        me = row_to_dict(conn.execute("SELECT role FROM users WHERE id=?", (uid,)).fetchone())
+        if me['role'] != 'admin':
+            return jsonify(error='Forbidden'), 403
+        req = row_to_dict(conn.execute(
+            "SELECT * FROM password_resets WHERE id=?", (rid,)).fetchone())
+        if not req:
+            return jsonify(error='Request not found'), 404
+        d = request.get_json() or {}
+        temp_pw = (d.get('tempPassword') or '').strip()
+        if not temp_pw or len(temp_pw) < 6:
+            return jsonify(error='Temporary password must be at least 6 characters'), 400
+        # Set new password on the user — force them to change it again on next login
+        conn.execute(
+            "UPDATE users SET password_hash=?, must_change_password=1 WHERE username=?",
+            (hash_pass(temp_pw), req['username']))
+        conn.execute(
+            "UPDATE password_resets SET status='resolved', temp_password=?, resolved_at=? WHERE id=?",
+            (temp_pw, datetime.now().isoformat(), rid))
+        conn.commit()
+    return jsonify(ok=True, tempPassword=temp_pw)
+
+@app.route('/api/forgot-password/dismiss/<int:rid>', methods=['DELETE'])
+@jwt_required()
+def dismiss_reset(rid):
+    """Admin: dismiss/delete a reset request."""
+    uid = int(get_jwt_identity())
+    with get_db() as conn:
+        me = row_to_dict(conn.execute("SELECT role FROM users WHERE id=?", (uid,)).fetchone())
+        if me['role'] != 'admin':
+            return jsonify(error='Forbidden'), 403
+        conn.execute("DELETE FROM password_resets WHERE id=?", (rid,))
+        conn.commit()
+    return jsonify(ok=True)
+
 
 # ─── STATIC (serve the frontend HTML) ─────────────────────────────────────────
 
 @app.route('/')
 def index():
-    return send_from_directory(BASE_DIR, 'index.html')
-
-@app.route('/styles.css')
-def styles():
-    return send_from_directory(BASE_DIR, 'styles.css')
-
-@app.route('/app.js')
-def appjs():
-    return send_from_directory(BASE_DIR, 'app.js')
-
-@app.route('/klf-logo.webp')
-def logo():
-    return send_from_directory(BASE_DIR, 'klf-logo.webp')
+    return send_from_directory('.', 'index.html')
 
 # ─── MAIN ──────────────────────────────────────────────────────────────────────
 
+# Initialise DB on import — works with both gunicorn (Render) and direct python server.py
+init_db()
+
 if __name__ == '__main__':
-    init_db()
     port = int(os.environ.get('PORT', 5000))
     print(f"\n✅  Kilifi ICT Attachee Server running → http://localhost:{port}\n")
     app.run(host='0.0.0.0', port=port, debug=False)
