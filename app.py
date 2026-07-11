@@ -610,7 +610,7 @@ def appjs():
 
 @app.route('/klf-logo.webp')
 def logo():
-    return send_from_directory(BASE_DIR, '/klf-logo.webp')
+    return send_from_directory(BASE_DIR, 'klf-logo.webp')
 
 # ─── MAIN ──────────────────────────────────────────────────────────────────────
 
