@@ -3,7 +3,7 @@ Kilifi County ICT Attachee Tracking System — Backend API
 Run: python server.py
 """
 
-import sqlite3, hashlib, os, json, secrets, time
+import sqlite3, hashlib, os, secrets, time
 from datetime import timedelta
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
@@ -11,10 +11,19 @@ from flask_jwt_extended import (
     JWTManager, create_access_token, jwt_required, get_jwt_identity
 )
 
-app = Flask(__name__, static_folder='.')
+# ── FIX: anchor paths to this script's own folder, not the process cwd ────────
+# Previously static_folder='.' was a RELATIVE path resolved against whatever
+# directory the process happened to be launched from. On your own machine that
+# usually matched, but on Render (and some other hosts) gunicorn/uvicorn can be
+# started from a different working directory, so '.' pointed somewhere that
+# did NOT contain klf-logo.webp — hence the logo working under VSCode's Live
+# Server (a plain static file server rooted at the folder) but not here.
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Auto-generate a persistent JWT secret on first run
-_SECRET_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.jwt_secret')
+app = Flask(__name__, static_folder=BASE_DIR, static_url_path='')
+# ────────────────────────────────────────────────────────────────────────────
+
+_SECRET_FILE = os.path.join(BASE_DIR, '.jwt_secret')
 if os.environ.get('JWT_SECRET'):
     _jwt_secret = os.environ['JWT_SECRET']
 elif os.path.exists(_SECRET_FILE):
@@ -28,17 +37,14 @@ app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=12)
 CORS(app)
 jwt = JWTManager(app)
 
-DB_PATH = os.environ.get('DB_PATH', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'kilifi.db'))
+DB_PATH = os.environ.get('DB_PATH', os.path.join(BASE_DIR, 'kilifi.db'))
 
-# Login rate limiter: max 10 attempts per IP per minute
 _login_attempts: dict = {}
 def _check_rate_limit(ip):
     now = time.time()
     attempts = [t for t in _login_attempts.get(ip, []) if now - t < 60]
     if len(attempts) >= 10: return False
     attempts.append(now); _login_attempts[ip] = attempts; return True
-
-# ─── DB HELPERS ───────────────────────────────────────────────────────────────
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
@@ -47,11 +53,9 @@ def get_db():
     return conn
 
 def hash_pass(p):
-    """Salted SHA-256 — used for all new/updated passwords."""
     return hashlib.sha256(f'kilifi2026{p}'.encode()).hexdigest()
 
 def hash_pass_legacy(p):
-    """Plain SHA-256 — matches old DB entries, auto-upgraded on login."""
     return hashlib.sha256(p.encode()).hexdigest()
 
 def row_to_dict(row):
@@ -61,33 +65,25 @@ def rows_to_list(rows):
     return [dict(r) for r in rows]
 
 def get_current_user(conn, uid):
-    """Fetch the calling user's role + supervisor_id for scoping checks."""
     return row_to_dict(conn.execute(
         "SELECT role, supervisor_id FROM users WHERE id=?", (uid,)).fetchone())
 
 def attachee_visible_to(conn, uid, aid):
-    """Return the attachee row if the current user is allowed to see it
-    (admins/viewers see all; supervisors only see their own), else None."""
     user = get_current_user(conn, uid)
-    if not user:
-        return None
+    if not user: return None
     row = row_to_dict(conn.execute("SELECT * FROM attachees WHERE id=?", (aid,)).fetchone())
-    if not row:
-        return None
+    if not row: return None
     if user['role'] == 'supervisor' and user.get('supervisor_id'):
-        if row.get('supervisor_id') != user['supervisor_id']:
-            return None
+        if row.get('supervisor_id') != user['supervisor_id']: return None
     return row
 
-# ─── SCHEMA + SEED ────────────────────────────────────────────────────────────
-
+# ─── SCHEMA ───────────────────────────────────────────────────────────────────
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS departments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
     description TEXT DEFAULT ''
 );
-
 CREATE TABLE IF NOT EXISTS institutions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -96,7 +92,6 @@ CREATE TABLE IF NOT EXISTS institutions (
     contact TEXT DEFAULT '',
     email TEXT DEFAULT ''
 );
-
 CREATE TABLE IF NOT EXISTS supervisors (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -105,7 +100,6 @@ CREATE TABLE IF NOT EXISTS supervisors (
     phone TEXT DEFAULT '',
     email TEXT DEFAULT ''
 );
-
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
@@ -116,7 +110,6 @@ CREATE TABLE IF NOT EXISTS users (
     supervisor_id INTEGER REFERENCES supervisors(id),
     must_change_password INTEGER NOT NULL DEFAULT 0
 );
-
 CREATE TABLE IF NOT EXISTS attachees (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     first_name TEXT NOT NULL,
@@ -124,7 +117,7 @@ CREATE TABLE IF NOT EXISTS attachees (
     id_number TEXT DEFAULT '',
     gender TEXT DEFAULT '',
     dob TEXT DEFAULT '',
-    phone TEXT NOT NULL DEFAULT '',
+    phone TEXT DEFAULT '',
     email TEXT DEFAULT '',
     institution_id INTEGER REFERENCES institutions(id),
     course TEXT DEFAULT '',
@@ -137,7 +130,6 @@ CREATE TABLE IF NOT EXISTS attachees (
     status TEXT DEFAULT 'Active',
     notes TEXT DEFAULT ''
 );
-
 CREATE TABLE IF NOT EXISTS evaluations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     attachee_id INTEGER NOT NULL REFERENCES attachees(id) ON DELETE CASCADE,
@@ -153,7 +145,6 @@ CREATE TABLE IF NOT EXISTS evaluations (
     remarks TEXT DEFAULT '',
     evaluated_by INTEGER REFERENCES supervisors(id)
 );
-
 CREATE TABLE IF NOT EXISTS documents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     attachee_id INTEGER NOT NULL REFERENCES attachees(id) ON DELETE CASCADE,
@@ -162,7 +153,6 @@ CREATE TABLE IF NOT EXISTS documents (
     issued_date TEXT DEFAULT '',
     notes TEXT DEFAULT ''
 );
-
 CREATE TABLE IF NOT EXISTS password_resets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL,
@@ -175,79 +165,74 @@ CREATE TABLE IF NOT EXISTS password_resets (
 """
 
 SEED_DEPARTMENTS = [
-    (3, 'IT Support & Helpdesk', 'End-user support and hardware maintenance'),
-    (4, 'Cybersecurity', 'Information security and compliance'),
-    (6, 'Health and Sanitation', 'County health and sanitation services'),
-    (7, 'Office of the Deputy Governor', 'Office of the Deputy Governor — Kilifi County'),
-    (8, 'Public Service Administration, Communication & Participatory Development', 'Public service and communication'),
-    (9, 'Public Works, Roads & Transport', 'Infrastructure, roads and transport'),
-    (10, 'Lands, Energy, Housing, Physical Planning & Urban Development', 'Lands, housing and urban development'),
-    (11, 'Mariakani Sub County Hospital', 'Mariakani Sub County Hospital ICT'),
-    (12, 'Office of the County Attorney', 'County Attorney legal and ICT support'),
-    (13, 'Malindi Sub County Hospital', 'Malindi Sub County Hospital ICT'),
-    (14, 'Water, Environment, Forestry, Climate Change & Solid Waste Management', 'Water and environment department'),
-    (15, 'Kaloleni Sub County Hospital', 'Kaloleni Sub County Hospital ICT'),
-    (16, 'Agriculture, Livestock, Fisheries & Blue Economy', 'Agriculture and blue economy'),
+    (3,'IT Support & Helpdesk','End-user support and hardware maintenance'),
+    (4,'Cybersecurity','Information security and compliance'),
+    (6,'Health and Sanitation','County health and sanitation services'),
+    (7,'Office of the Deputy Governor','Office of the Deputy Governor — Kilifi County'),
+    (8,'Public Service Administration, Communication & Participatory Development','Public service and communication'),
+    (9,'Public Works, Roads & Transport','Infrastructure, roads and transport'),
+    (10,'Lands, Energy, Housing, Physical Planning & Urban Development','Lands, housing and urban development'),
+    (11,'Mariakani Sub County Hospital','Mariakani Sub County Hospital ICT'),
+    (12,'Office of the County Attorney','County Attorney legal and ICT support'),
+    (13,'Malindi Sub County Hospital','Malindi Sub County Hospital ICT'),
+    (14,'Water, Environment, Forestry, Climate Change & Solid Waste Management','Water and environment department'),
+    (15,'Kaloleni Sub County Hospital','Kaloleni Sub County Hospital ICT'),
+    (16,'Agriculture, Livestock, Fisheries & Blue Economy','Agriculture and blue economy'),
 ]
-
 SEED_INSTITUTIONS = [
-    (1, 'Technical University of Mombasa', 'University', 'Mombasa', '+254 41 2492222', 'info@tum.ac.ke'),
-    (2, 'Pwani University', 'University', 'Kilifi', '+254 41 2022000', 'registrar@pu.ac.ke'),
-    (3, 'Kenya Coast National Polytechnic', 'Polytechnic', 'Mombasa', '+254 722 000001', 'info@kcnp.ac.ke'),
-    (5, 'University of Eldoret', 'University', 'Uasin Gishu', '', 'info@ue.ac.ke'),
-    (6, 'Laikipia University', 'University', 'Laikipia', '', ''),
-    (7, 'University of Embu', 'University', 'Embu', '', ''),
-    (8, 'Godoma Technical Training Institute', 'TVET', 'Kilifi', '', ''),
-    (9, 'Kiriri University of Science and Technology', 'University', 'Nairobi', '', ''),
-    (10, 'Jaramogi Oginga Odinga University of Science & Technology', 'University', 'Siaya', '', ''),
-    (11, 'Taita Taveta National Polytechnic', 'Polytechnic', 'Taita Taveta', '', ''),
-    (12, 'Kirinyaga University', 'University', 'Kirinyaga', '', ''),
-    (13, 'Weru Technical and Vocational College', 'TVET', 'Tharaka Nithi', '', ''),
-    (14, 'Machakos University', 'University', 'Machakos', '', ''),
-    (15, 'Kinango Technical and Vocational College', 'TVET', 'Kwale', '', ''),
-    (16, 'Shanzu Teachers Technical Training College', 'TVET', 'Mombasa', '', ''),
-    (17, 'Kaloleni Technical and Vocational College', 'TVET', 'Kilifi', '', ''),
-    (18, 'Bungoma National Polytechnic', 'Polytechnic', 'Bungoma', '', ''),
-    (19, 'Maseno University', 'University', 'Kisumu', '', ''),
+    (1,'Technical University of Mombasa','University','Mombasa','+254 41 2492222','info@tum.ac.ke'),
+    (2,'Pwani University','University','Kilifi','+254 41 2022000','registrar@pu.ac.ke'),
+    (3,'Kenya Coast National Polytechnic','Polytechnic','Mombasa','+254 722 000001','info@kcnp.ac.ke'),
+    (5,'University of Eldoret','University','Uasin Gishu','','info@ue.ac.ke'),
+    (6,'Laikipia University','University','Laikipia','',''),
+    (7,'University of Embu','University','Embu','',''),
+    (8,'Godoma Technical Training Institute','TVET','Kilifi','',''),
+    (9,'Kiriri University of Science and Technology','University','Nairobi','',''),
+    (10,'Jaramogi Oginga Odinga University of Science & Technology','University','Siaya','',''),
+    (11,'Taita Taveta National Polytechnic','Polytechnic','Taita Taveta','',''),
+    (12,'Kirinyaga University','University','Kirinyaga','',''),
+    (13,'Weru Technical and Vocational College','TVET','Tharaka Nithi','',''),
+    (14,'Machakos University','University','Machakos','',''),
+    (15,'Kinango Technical and Vocational College','TVET','Kwale','',''),
+    (16,'Shanzu Teachers Technical Training College','TVET','Mombasa','',''),
+    (17,'Kaloleni Technical and Vocational College','TVET','Kilifi','',''),
+    (18,'Bungoma National Polytechnic','Polytechnic','Bungoma','',''),
+    (19,'Maseno University','University','Kisumu','',''),
 ]
-
 SEED_SUPERVISORS = [
-    (6, 'Linus Tinga', 3, 'ICT Officer', '0797776367', 'linustinga254@gmail.com'),
-    (7, 'Betty Mhache', 11, 'ICT Officer', '', ''),
-    (8, 'Laban', 3, 'ICT Officer', '', ''),
-    (9, 'Michael Chando', 7, 'ICT Officer', '', ''),
-    (10, 'Owen Kodi', 6, 'ICT Officer', '', ''),
-    (11, 'Emily Dama', 8, 'ICT Officer', '', ''),
-    (12, 'Sharon Oloo', 9, 'ICT Officer', '', ''),
-    (13, 'Jemimah Idza', 6, 'ICT Officer', '', ''),
-    (14, 'Bethwel Sanga', 10, 'ICT Officer', '', ''),
-    (15, 'Junior Mbogo', 12, 'ICT Officer', '', ''),
-    (16, 'Malindi ICT Officer', 13, 'ICT Officer', '', ''),
-    (17, 'ICT Officer Water', 14, 'ICT Officer', '', ''),
-    (18, 'Chrispas Tuku', 15, 'ICT Officer', '', ''),
-    (19, 'Stanley', 16, 'ICT Officer', '', ''),
+    (6,'Linus Tinga',3,'ICT Officer','0797776367','linustinga254@gmail.com'),
+    (7,'Betty Mhache',11,'ICT Officer','',''),
+    (8,'Laban',3,'ICT Officer','',''),
+    (9,'Michael Chando',7,'ICT Officer','',''),
+    (10,'Owen Kodi',6,'ICT Officer','',''),
+    (11,'Emily Dama',8,'ICT Officer','',''),
+    (12,'Sharon Oloo',9,'ICT Officer','',''),
+    (13,'Jemimah Idza',6,'ICT Officer','',''),
+    (14,'Bethwel Sanga',10,'ICT Officer','',''),
+    (15,'Junior Mbogo',12,'ICT Officer','',''),
+    (16,'Malindi ICT Officer',13,'ICT Officer','',''),
+    (17,'ICT Officer Water',14,'ICT Officer','',''),
+    (18,'Chrispas Tuku',15,'ICT Officer','',''),
+    (19,'Stanley',16,'ICT Officer','',''),
 ]
-
-# users: (id, username, full_name, email, password_hash, role, supervisor_id, must_change_password)
 SEED_USERS = [
-    (1,  'admin',   'System Administrator',  'admin@ict.local',              hash_pass('Admin@1234'), 'admin',      None, 0),
-    (6,  'linus',   'Linus Tinga',           'linustinga254@gmail.com',       hash_pass('Pass@1234'), 'supervisor', 6, 1),
-    (7,  'betty',   'Betty Mhache',          'b.mhache@kilifi.go.ke',         hash_pass('Pass@1234'), 'supervisor', 7, 1),
-    (8,  'laban',   'Laban',                 '',                              hash_pass('Pass@1234'), 'supervisor', 8, 1),
-    (9,  'michael', 'Michael Chando',        '',                              hash_pass('Pass@1234'), 'supervisor', 9, 1),
-    (10, 'owen',    'Owen Kodi',             '',                              hash_pass('Pass@1234'), 'supervisor', 10, 1),
-    (11, 'emily',   'Emily Dama',            '',                              hash_pass('Pass@1234'), 'supervisor', 11, 1),
-    (12, 'sharon',  'Sharon Oloo',           '',                              hash_pass('Pass@1234'), 'supervisor', 12, 1),
-    (13, 'jemimah', 'Jemimah Idza',         '',                              hash_pass('Pass@1234'), 'supervisor', 13, 1),
-    (14, 'bethwel', 'Bethwel Sanga',        '',                              hash_pass('Pass@1234'), 'supervisor', 14, 1),
-    (15, 'junior',  'Junior Mbogo',          '',                              hash_pass('Pass@1234'), 'supervisor', 15, 1),
+    (1,'admin','System Administrator','admin@ict.local',hash_pass('Admin@1234'),'admin',None,0),
+    (6,'linus','Linus Tinga','linustinga254@gmail.com',hash_pass('Pass@1234'),'supervisor',6,1),
+    (7,'betty','Betty Mhache','b.mhache@kilifi.go.ke',hash_pass('Pass@1234'),'supervisor',7,1),
+    (8,'laban','Laban','',hash_pass('Pass@1234'),'supervisor',8,1),
+    (9,'michael','Michael Chando','',hash_pass('Pass@1234'),'supervisor',9,1),
+    (10,'owen','Owen Kodi','',hash_pass('Pass@1234'),'supervisor',10,1),
+    (11,'emily','Emily Dama','',hash_pass('Pass@1234'),'supervisor',11,1),
+    (12,'sharon','Sharon Oloo','',hash_pass('Pass@1234'),'supervisor',12,1),
+    (13,'jemimah','Jemimah Idza','',hash_pass('Pass@1234'),'supervisor',13,1),
+    (14,'bethwel','Bethwel Sanga','',hash_pass('Pass@1234'),'supervisor',14,1),
+    (15,'junior','Junior Mbogo','',hash_pass('Pass@1234'),'supervisor',15,1),
 ]
-
 SEED_ATTACHEES = [
-    (6, 'William','Saidi','40652223','Male','2003-04-05','0716168180','willymtana254@gmail.com',5,'Computer Science',3,'COM/014/23',3,6,'2026-05-19','2026-07-31','Active','Committed'),
-    (7, 'Joseph','Mwangaza','41285293','Male','2003-01-31','0792918456','josephmwangaza1@gmail.com',6,'Bachelor of Science Information Communication and Technology',4,'SC/ICT/1274/22',3,6,'2026-05-11','2026-08-11','Active','Committed'),
-    (8, 'Isaac','Mwangi','41989457','Male','','0714207777','',2,'Bachelor of Science in Computer Science',3,'',3,6,'2026-05-26','2026-08-31','Active',''),
-    (9, 'Samini','Kenga','39161218','Male','','0700000009','',3,'Diploma in Information Communication Technology',None,'',4,7,'2026-05-21','2026-08-21','Active',''),
+    (6,'William','Saidi','40652223','Male','2003-04-05','0716168180','willymtana254@gmail.com',5,'Computer Science',3,'COM/014/23',3,6,'2026-05-19','2026-07-31','Active','Committed'),
+    (7,'Joseph','Mwangaza','41285293','Male','2003-01-31','0792918456','josephmwangaza1@gmail.com',6,'Bachelor of Science Information Communication and Technology',4,'SC/ICT/1274/22',3,6,'2026-05-11','2026-08-11','Active','Committed'),
+    (8,'Isaac','Mwangi','41989457','Male','','0714207777','',2,'Bachelor of Science in Computer Science',3,'',3,6,'2026-05-26','2026-08-31','Active',''),
+    (9,'Samini','Kenga','39161218','Male','','0700000009','',3,'Diploma in Information Communication Technology',None,'',4,7,'2026-05-21','2026-08-21','Active',''),
     (10,'Paul','Wanjiku','29997641','Male','','0700000010','',2,'Diploma in ICT',2,'',6,8,'2026-06-08','2026-09-04','Active',''),
     (11,'Khalid','Swaleh','','Male','','0700000011','',7,'Bachelor of Science in Computer Science',3,'',7,9,'2026-05-11','2026-08-14','Active',''),
     (12,'Gladys','Salama','','Female','','0700000012','',3,'Diploma in Information Communication Technology',3,'',6,10,'2026-05-11','2026-08-14','Active',''),
@@ -273,25 +258,22 @@ SEED_ATTACHEES = [
     (32,'Rehema','Mwambire','','','','0700000032','',18,'Certificate in ICT',2,'',10,14,'2026-01-14','2026-04-12','Active',''),
     (33,'Ian','Chivatsi','39915619','Male','','0700000033','',19,'Bachelor of Science in Computer Science',4,'',6,13,'2026-01-08','2026-04-10','Active',''),
 ]
-
 SEED_EVALUATIONS = [
-    (7, 6, '2026-05-25', 'Weekly', 80, 'Excellent', 90, 'Database management', 'Excellent', 'Timely', 'Co-operative', 'Committed', 6),
+    (7,6,'2026-05-25','Weekly',80,'Excellent',90,'Database management','Excellent','Timely','Co-operative','Committed',6),
 ]
 
 def init_db():
     with get_db() as conn:
         conn.executescript(SCHEMA)
-        # Add columns to existing DBs that predate this version
-        try:
-            conn.execute("ALTER TABLE users ADD COLUMN supervisor_id INTEGER REFERENCES supervisors(id)")
-            conn.commit()
-        except Exception:
-            pass  # column already exists
-        try:
-            conn.execute("ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0")
-            conn.commit()
-        except Exception:
-            pass  # column already exists
+        for col_sql in [
+            "ALTER TABLE users ADD COLUMN supervisor_id INTEGER REFERENCES supervisors(id)",
+            "ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0",
+            # ── FIX: drop NOT NULL constraint on phone so old records can be edited ──
+            # SQLite can't ALTER column constraints; we leave the column as DEFAULT ''
+            # and handle it in application logic (phone optional on PUT, required on POST)
+        ]:
+            try: conn.execute(col_sql); conn.commit()
+            except Exception: pass
         fresh = conn.execute("SELECT COUNT(*) FROM departments").fetchone()[0] == 0
         if fresh:
             conn.executemany("INSERT OR IGNORE INTO departments(id,name,description) VALUES(?,?,?)", SEED_DEPARTMENTS)
@@ -301,26 +283,13 @@ def init_db():
             conn.executemany("INSERT OR IGNORE INTO attachees(id,first_name,last_name,id_number,gender,dob,phone,email,institution_id,course,year_of_study,reg_no,department_id,supervisor_id,start_date,end_date,status,notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", SEED_ATTACHEES)
             conn.executemany("INSERT OR IGNORE INTO evaluations(id,attachee_id,date,type,score,performance,attendance,technical_skills,communication,punctuality,team_work,remarks,evaluated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)", SEED_EVALUATIONS)
         else:
-            # Only INSERT brand-new seed users (e.g. a supervisor added in a later code update).
-            # Never overwrite an existing user's password_hash or must_change_password flag —
-            # doing so on every restart would wipe out a supervisor's own password change and
-            # force them to change it again forever.
             for u in SEED_USERS:
-                uid, username, full_name, email, pw_hash, role, sup_id, must_change = u
-                existing = conn.execute("SELECT id FROM users WHERE id=?", (uid,)).fetchone()
-                if existing:
-                    # Keep credentials/flag as-is; only patch non-sensitive profile fields
-                    # in case names/emails/roles changed in code, without touching the password.
-                    conn.execute(
-                        "UPDATE users SET username=?,full_name=?,role=?,supervisor_id=? WHERE id=?",
-                        (username, full_name, role, sup_id, uid)
-                    )
+                uid,username,full_name,email,pw_hash,role,sup_id,must_change = u
+                if conn.execute("SELECT id FROM users WHERE id=?", (uid,)).fetchone():
+                    conn.execute("UPDATE users SET username=?,full_name=?,role=?,supervisor_id=? WHERE id=?",
+                                 (username,full_name,role,sup_id,uid))
                 else:
-                    conn.execute(
-                        "INSERT OR IGNORE INTO users(id,username,full_name,email,password_hash,role,supervisor_id,must_change_password) VALUES(?,?,?,?,?,?,?,?)", u
-                    )
-            # Backfill missing phone numbers on existing rows (NOT NULL safety net for legacy DBs)
-            conn.execute("UPDATE attachees SET phone='0700000000' WHERE phone IS NULL OR TRIM(phone)=''")
+                    conn.execute("INSERT OR IGNORE INTO users(id,username,full_name,email,password_hash,role,supervisor_id,must_change_password) VALUES(?,?,?,?,?,?,?,?)", u)
         conn.commit()
 
 # ─── AUTH ──────────────────────────────────────────────────────────────────────
@@ -336,15 +305,12 @@ def login():
     if not username or not password:
         return jsonify(error='Username and password are required'), 400
     with get_db() as conn:
-        user = row_to_dict(conn.execute(
-            "SELECT * FROM users WHERE username=?", (username,)
-        ).fetchone())
+        user = row_to_dict(conn.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone())
         if user:
             salted = hash_pass(password)
             legacy = hash_pass_legacy(password)
             if user['password_hash'] in (salted, legacy):
                 if user['password_hash'] == legacy:
-                    # Auto-upgrade to salted hash
                     conn.execute("UPDATE users SET password_hash=? WHERE id=?", (salted, user['id']))
                     conn.commit()
                 token = create_access_token(identity=str(user['id']))
@@ -374,13 +340,11 @@ def me():
 def update_profile():
     uid = int(get_jwt_identity())
     d = request.get_json() or {}
-    username  = (d.get('username') or '').strip()
+    username   = (d.get('username') or '').strip()
     current_pw = d.get('currentPassword') or ''
     new_pw     = d.get('newPassword') or ''
-    if not username:
-        return jsonify(error='Username cannot be empty'), 400
-    if not current_pw:
-        return jsonify(error='Current password is required to confirm changes'), 400
+    if not username:   return jsonify(error='Username cannot be empty'), 400
+    if not current_pw: return jsonify(error='Current password is required to confirm changes'), 400
     with get_db() as conn:
         user = row_to_dict(conn.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone())
         if not user: return jsonify(error='User not found'), 404
@@ -390,9 +354,8 @@ def update_profile():
             "SELECT id FROM users WHERE username=? AND id!=?", (username, uid)).fetchone())
         if taken: return jsonify(error='Username already taken by another user'), 409
         if new_pw:
-            if len(new_pw) < 6:
-                return jsonify(error='New password must be at least 6 characters'), 400
-            conn.execute("UPDATE users SET username=?, password_hash=?, must_change_password=0 WHERE id=?",
+            if len(new_pw) < 6: return jsonify(error='New password must be at least 6 characters'), 400
+            conn.execute("UPDATE users SET username=?,password_hash=?,must_change_password=0 WHERE id=?",
                          (username, hash_pass(new_pw), uid))
         else:
             conn.execute("UPDATE users SET username=? WHERE id=?", (username, uid))
@@ -417,10 +380,10 @@ def change_password():
         if not user: return jsonify(error='User not found'), 404
         if user['password_hash'] not in (hash_pass(current_pw), hash_pass_legacy(current_pw)):
             return jsonify(error='Current password is incorrect'), 401
-        conn.execute("UPDATE users SET password_hash=?, must_change_password=0 WHERE id=?", (hash_pass(new_pw), uid))
+        conn.execute("UPDATE users SET password_hash=?,must_change_password=0 WHERE id=?",
+                     (hash_pass(new_pw), uid))
         conn.commit()
     return jsonify(ok=True, message='Password changed successfully')
-
 
 # ─── DEPARTMENTS ───────────────────────────────────────────────────────────────
 
@@ -462,8 +425,7 @@ def update_department(did):
 def delete_department(did):
     with get_db() as conn:
         count = conn.execute("SELECT COUNT(*) FROM attachees WHERE department_id=?", (did,)).fetchone()[0]
-        if count > 0:
-            return jsonify(error=f'Cannot delete — {count} attachee(s) assigned'), 409
+        if count > 0: return jsonify(error=f'Cannot delete — {count} attachee(s) assigned'), 409
         conn.execute("DELETE FROM departments WHERE id=?", (did,))
         conn.commit()
     return jsonify(ok=True)
@@ -484,8 +446,15 @@ def add_institution():
     name = (data.get('name') or '').strip()
     if not name: return jsonify(error='Name required'), 400
     with get_db() as conn:
-        cur = conn.execute("INSERT INTO institutions(name,type,county,contact,email) VALUES(?,?,?,?,?)",
-                           (name, data.get('type',''), data.get('county',''), data.get('contact',''), data.get('email','')))
+        # Return existing row if name already exists (prevents duplicates from manual entry)
+        existing = row_to_dict(conn.execute(
+            "SELECT * FROM institutions WHERE LOWER(name)=LOWER(?)", (name,)).fetchone())
+        if existing:
+            return jsonify(existing), 200
+        cur = conn.execute(
+            "INSERT INTO institutions(name,type,county,contact,email) VALUES(?,?,?,?,?)",
+            (name, data.get('type',''), data.get('county',''),
+             data.get('contact',''), data.get('email','')))
         conn.commit()
         row = row_to_dict(conn.execute("SELECT * FROM institutions WHERE id=?", (cur.lastrowid,)).fetchone())
     return jsonify(row), 201
@@ -498,7 +467,8 @@ def update_institution(iid):
     if not name: return jsonify(error='Name required'), 400
     with get_db() as conn:
         conn.execute("UPDATE institutions SET name=?,type=?,county=?,contact=?,email=? WHERE id=?",
-                     (name, data.get('type',''), data.get('county',''), data.get('contact',''), data.get('email',''), iid))
+                     (name, data.get('type',''), data.get('county',''),
+                      data.get('contact',''), data.get('email',''), iid))
         conn.commit()
         row = row_to_dict(conn.execute("SELECT * FROM institutions WHERE id=?", (iid,)).fetchone())
     return jsonify(row)
@@ -508,8 +478,7 @@ def update_institution(iid):
 def delete_institution(iid):
     with get_db() as conn:
         count = conn.execute("SELECT COUNT(*) FROM attachees WHERE institution_id=?", (iid,)).fetchone()[0]
-        if count > 0:
-            return jsonify(error=f'Cannot delete — {count} attachee(s) assigned'), 409
+        if count > 0: return jsonify(error=f'Cannot delete — {count} attachee(s) assigned'), 409
         conn.execute("DELETE FROM institutions WHERE id=?", (iid,))
         conn.commit()
     return jsonify(ok=True)
@@ -530,8 +499,10 @@ def add_supervisor():
     name = (data.get('name') or '').strip()
     if not name: return jsonify(error='Name required'), 400
     with get_db() as conn:
-        cur = conn.execute("INSERT INTO supervisors(name,department_id,job_title,phone,email) VALUES(?,?,?,?,?)",
-                           (name, data.get('departmentId'), data.get('jobTitle','ICT Officer'), data.get('phone',''), data.get('email','')))
+        cur = conn.execute(
+            "INSERT INTO supervisors(name,department_id,job_title,phone,email) VALUES(?,?,?,?,?)",
+            (name, data.get('departmentId'), data.get('jobTitle','ICT Officer'),
+             data.get('phone',''), data.get('email','')))
         conn.commit()
         row = row_to_dict(conn.execute("SELECT * FROM supervisors WHERE id=?", (cur.lastrowid,)).fetchone())
     return jsonify(row), 201
@@ -541,8 +512,7 @@ def add_supervisor():
 def delete_supervisor(sid):
     with get_db() as conn:
         count = conn.execute("SELECT COUNT(*) FROM attachees WHERE supervisor_id=?", (sid,)).fetchone()[0]
-        if count > 0:
-            return jsonify(error=f'Cannot delete — {count} attachee(s) assigned'), 409
+        if count > 0: return jsonify(error=f'Cannot delete — {count} attachee(s) assigned'), 409
         conn.execute("DELETE FROM supervisors WHERE id=?", (sid,))
         conn.commit()
     return jsonify(ok=True)
@@ -556,12 +526,10 @@ def get_attachees():
     today = date.today().isoformat()
     uid = int(get_jwt_identity())
     with get_db() as conn:
-        # Auto-update expired/re-activated attachee status
         conn.execute("UPDATE attachees SET status='Completed' WHERE end_date < ? AND status='Active'", (today,))
         conn.execute("UPDATE attachees SET status='Active' WHERE end_date >= ? AND start_date <= ? AND status='Completed'", (today, today))
         conn.commit()
         user = row_to_dict(conn.execute("SELECT role, supervisor_id FROM users WHERE id=?", (uid,)).fetchone())
-        # Supervisors only see their own attachees; admins see all
         if user['role'] == 'supervisor' and user.get('supervisor_id'):
             rows = rows_to_list(conn.execute(
                 "SELECT * FROM attachees WHERE supervisor_id=? ORDER BY first_name,last_name",
@@ -576,17 +544,17 @@ def get_attachees():
 def add_attachee():
     uid = int(get_jwt_identity())
     d = request.get_json()
-    fn = (d.get('firstName') or '').strip()
-    ln = (d.get('lastName') or '').strip()
-    phone = (d.get('phone') or '').strip()
+    fn    = (d.get('firstName') or '').strip()
+    ln    = (d.get('lastName')  or '').strip()
+    phone = (d.get('phone')     or '').strip()
     if not fn or not ln or not d.get('startDate') or not d.get('endDate'):
         return jsonify(error='First name, last name, start and end date are required'), 400
+    # Phone required on new record creation
     if not phone:
         return jsonify(error='Phone number is required'), 400
     with get_db() as conn:
         me = get_current_user(conn, uid)
         supervisor_id = d.get('supervisorId')
-        # Supervisors can only ever create attachees assigned to themselves
         if me and me['role'] == 'supervisor' and me.get('supervisor_id'):
             supervisor_id = me['supervisor_id']
         cur = conn.execute("""
@@ -594,10 +562,9 @@ def add_attachee():
             institution_id,course,year_of_study,reg_no,department_id,supervisor_id,
             start_date,end_date,status,notes)
             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (fn, ln, d.get('gender',''), d.get('dob',''),
-             phone, d.get('email',''), d.get('institutionId'),
-             d.get('course',''), d.get('yearOfStudy'), d.get('regNo',''),
-             d.get('departmentId'), supervisor_id,
+            (fn, ln, d.get('gender',''), d.get('dob',''), phone, d.get('email',''),
+             d.get('institutionId'), d.get('course',''), d.get('yearOfStudy'),
+             d.get('regNo',''), d.get('departmentId'), supervisor_id,
              d['startDate'], d['endDate'], d.get('status','Active'), d.get('notes','')))
         conn.commit()
         row = row_to_dict(conn.execute("SELECT * FROM attachees WHERE id=?", (cur.lastrowid,)).fetchone())
@@ -616,29 +583,35 @@ def get_attachee(aid):
 @jwt_required()
 def update_attachee(aid):
     uid = int(get_jwt_identity())
-    d = request.get_json()
-    fn = (d.get('firstName') or '').strip()
-    ln = (d.get('lastName') or '').strip()
-    phone = (d.get('phone') or '').strip()
+    d     = request.get_json()
+    fn    = (d.get('firstName') or '').strip()
+    ln    = (d.get('lastName')  or '').strip()
     if not fn or not ln: return jsonify(error='Name required'), 400
-    if not phone: return jsonify(error='Phone number is required'), 400
+
     with get_db() as conn:
-        if not attachee_visible_to(conn, uid, aid):
-            return jsonify(error='Not found'), 404
+        existing = attachee_visible_to(conn, uid, aid)
+        if not existing: return jsonify(error='Not found'), 404
+
         me = get_current_user(conn, uid)
         supervisor_id = d.get('supervisorId')
         if me and me['role'] == 'supervisor' and me.get('supervisor_id'):
             supervisor_id = me['supervisor_id']
+
+        # ── FIX: phone is optional on edit — fall back to stored value ────────
+        phone = (d.get('phone') or '').strip()
+        if not phone:
+            phone = existing.get('phone') or ''
+        # ──────────────────────────────────────────────────────────────────────
+
         conn.execute("""
-            UPDATE attachees SET first_name=?,last_name=?,gender=?,dob=?,
-            phone=?,email=?,institution_id=?,course=?,year_of_study=?,reg_no=?,
-            department_id=?,supervisor_id=?,start_date=?,end_date=?,status=?,notes=?
-            WHERE id=?""",
-            (fn, ln, d.get('gender',''), d.get('dob',''),
-             phone, d.get('email',''), d.get('institutionId'),
-             d.get('course',''), d.get('yearOfStudy'), d.get('regNo',''),
-             d.get('departmentId'), supervisor_id,
-             d.get('startDate'), d.get('endDate'), d.get('status','Active'), d.get('notes',''), aid))
+            UPDATE attachees SET first_name=?,last_name=?,gender=?,dob=?,phone=?,email=?,
+            institution_id=?,course=?,year_of_study=?,reg_no=?,department_id=?,supervisor_id=?,
+            start_date=?,end_date=?,status=?,notes=? WHERE id=?""",
+            (fn, ln, d.get('gender',''), d.get('dob',''), phone, d.get('email',''),
+             d.get('institutionId'), d.get('course',''), d.get('yearOfStudy'),
+             d.get('regNo',''), d.get('departmentId'), supervisor_id,
+             d.get('startDate'), d.get('endDate'), d.get('status','Active'),
+             d.get('notes',''), aid))
         conn.commit()
         row = row_to_dict(conn.execute("SELECT * FROM attachees WHERE id=?", (aid,)).fetchone())
     return jsonify(row)
@@ -649,8 +622,7 @@ def delete_attachee(aid):
     uid = int(get_jwt_identity())
     with get_db() as conn:
         me = get_current_user(conn, uid)
-        if not me or me['role'] != 'admin':
-            return jsonify(error='Forbidden'), 403
+        if not me or me['role'] != 'admin': return jsonify(error='Forbidden'), 403
         conn.execute("DELETE FROM attachees WHERE id=?", (aid,))
         conn.commit()
     return jsonify(ok=True)
@@ -662,8 +634,7 @@ def delete_attachee(aid):
 def get_evals(aid):
     uid = int(get_jwt_identity())
     with get_db() as conn:
-        if not attachee_visible_to(conn, uid, aid):
-            return jsonify(error='Not found'), 404
+        if not attachee_visible_to(conn, uid, aid): return jsonify(error='Not found'), 404
         rows = rows_to_list(conn.execute(
             "SELECT * FROM evaluations WHERE attachee_id=? ORDER BY date DESC", (aid,)).fetchall())
     return jsonify(rows)
@@ -674,8 +645,13 @@ def add_eval(aid):
     uid = int(get_jwt_identity())
     d = request.get_json()
     with get_db() as conn:
-        if not attachee_visible_to(conn, uid, aid):
-            return jsonify(error='Not found'), 404
+        if not attachee_visible_to(conn, uid, aid): return jsonify(error='Not found'), 404
+        # ── FIX: supervisor's evaluated_by is always their own record ─────────
+        evaluated_by = d.get('evaluatedBy')
+        me = get_current_user(conn, uid)
+        if me and me['role'] == 'supervisor' and me.get('supervisor_id'):
+            evaluated_by = me['supervisor_id']
+        # ──────────────────────────────────────────────────────────────────────
         cur = conn.execute("""
             INSERT INTO evaluations(attachee_id,date,type,score,performance,attendance,
             technical_skills,communication,punctuality,team_work,remarks,evaluated_by)
@@ -684,7 +660,7 @@ def add_eval(aid):
              d.get('performance','Good'), d.get('attendance',100),
              d.get('technicalSkills',''), d.get('communication',''),
              d.get('punctuality',''), d.get('teamWork',''),
-             d.get('remarks',''), d.get('evaluatedBy')))
+             d.get('remarks',''), evaluated_by))
         conn.commit()
         row = row_to_dict(conn.execute("SELECT * FROM evaluations WHERE id=?", (cur.lastrowid,)).fetchone())
     return jsonify(row), 201
@@ -695,8 +671,11 @@ def update_eval(aid, eid):
     uid = int(get_jwt_identity())
     d = request.get_json()
     with get_db() as conn:
-        if not attachee_visible_to(conn, uid, aid):
-            return jsonify(error='Not found'), 404
+        if not attachee_visible_to(conn, uid, aid): return jsonify(error='Not found'), 404
+        evaluated_by = d.get('evaluatedBy')
+        me = get_current_user(conn, uid)
+        if me and me['role'] == 'supervisor' and me.get('supervisor_id'):
+            evaluated_by = me['supervisor_id']
         conn.execute("""UPDATE evaluations SET date=?,type=?,score=?,performance=?,attendance=?,
             technical_skills=?,communication=?,punctuality=?,team_work=?,remarks=?,evaluated_by=?
             WHERE id=? AND attachee_id=?""",
@@ -704,7 +683,7 @@ def update_eval(aid, eid):
              d.get('performance','Good'), d.get('attendance',100),
              d.get('technicalSkills',''), d.get('communication',''),
              d.get('punctuality',''), d.get('teamWork',''),
-             d.get('remarks',''), d.get('evaluatedBy'), eid, aid))
+             d.get('remarks',''), evaluated_by, eid, aid))
         conn.commit()
         row = row_to_dict(conn.execute("SELECT * FROM evaluations WHERE id=?", (eid,)).fetchone())
     return jsonify(row)
@@ -714,8 +693,7 @@ def update_eval(aid, eid):
 def delete_eval(aid, eid):
     uid = int(get_jwt_identity())
     with get_db() as conn:
-        if not attachee_visible_to(conn, uid, aid):
-            return jsonify(error='Not found'), 404
+        if not attachee_visible_to(conn, uid, aid): return jsonify(error='Not found'), 404
         conn.execute("DELETE FROM evaluations WHERE id=? AND attachee_id=?", (eid, aid))
         conn.commit()
     return jsonify(ok=True)
@@ -727,8 +705,7 @@ def delete_eval(aid, eid):
 def get_docs(aid):
     uid = int(get_jwt_identity())
     with get_db() as conn:
-        if not attachee_visible_to(conn, uid, aid):
-            return jsonify(error='Not found'), 404
+        if not attachee_visible_to(conn, uid, aid): return jsonify(error='Not found'), 404
         rows = rows_to_list(conn.execute(
             "SELECT * FROM documents WHERE attachee_id=? ORDER BY issued_date DESC", (aid,)).fetchall())
     return jsonify(rows)
@@ -741,8 +718,7 @@ def add_doc(aid):
     name = (d.get('fileName') or '').strip()
     if not name: return jsonify(error='File name required'), 400
     with get_db() as conn:
-        if not attachee_visible_to(conn, uid, aid):
-            return jsonify(error='Not found'), 404
+        if not attachee_visible_to(conn, uid, aid): return jsonify(error='Not found'), 404
         cur = conn.execute(
             "INSERT INTO documents(attachee_id,doc_type,file_name,issued_date,notes) VALUES(?,?,?,?,?)",
             (aid, d.get('docType',''), name, d.get('issuedDate',''), d.get('notes','')))
@@ -770,10 +746,10 @@ def add_user():
     with get_db() as conn:
         me = row_to_dict(conn.execute("SELECT role FROM users WHERE id=?", (uid,)).fetchone())
         if me['role'] != 'admin': return jsonify(error='Forbidden'), 403
-        d = request.get_json()
-        username = (d.get('username') or '').strip()
-        full_name = (d.get('fullName') or '').strip()
-        password = d.get('password') or ''
+        d         = request.get_json()
+        username  = (d.get('username')  or '').strip()
+        full_name = (d.get('fullName')  or '').strip()
+        password  = d.get('password')   or ''
         if not username or not full_name or not password:
             return jsonify(error='Username, name and password required'), 400
         try:
@@ -803,94 +779,79 @@ def delete_user(uid2):
 
 @app.route('/api/forgot-password', methods=['POST'])
 def forgot_password():
-    """User submits their username to request a password reset."""
     from datetime import datetime
     d = request.get_json() or {}
     username = (d.get('username') or '').strip()
-    if not username:
-        return jsonify(error='Username is required'), 400
+    if not username: return jsonify(error='Username is required'), 400
     with get_db() as conn:
-        user = row_to_dict(conn.execute(
-            "SELECT id FROM users WHERE username=?", (username,)).fetchone())
+        user = row_to_dict(conn.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone())
         if not user:
-            # Don't reveal whether username exists
             return jsonify(ok=True, message='If that username exists, a reset request has been submitted.')
-        # Check for existing pending request
-        existing = conn.execute(
-            "SELECT id FROM password_resets WHERE username=? AND status='pending'", (username,)).fetchone()
-        if existing:
+        if conn.execute("SELECT id FROM password_resets WHERE username=? AND status='pending'", (username,)).fetchone():
             return jsonify(ok=True, message='A reset request is already pending. Please contact your admin.')
         token = secrets.token_hex(16)
-        conn.execute(
-            "INSERT INTO password_resets(username, token, status, created_at) VALUES(?,?,'pending',?)",
-            (username, token, datetime.now().isoformat()))
+        conn.execute("INSERT INTO password_resets(username,token,status,created_at) VALUES(?,?,'pending',?)",
+                     (username, token, datetime.now().isoformat()))
         conn.commit()
     return jsonify(ok=True, message='Reset request submitted. Please contact your admin to approve it.')
 
 @app.route('/api/forgot-password/requests', methods=['GET'])
 @jwt_required()
 def get_reset_requests():
-    """Admin: list all pending reset requests."""
     uid = int(get_jwt_identity())
     with get_db() as conn:
         me = row_to_dict(conn.execute("SELECT role FROM users WHERE id=?", (uid,)).fetchone())
-        if me['role'] != 'admin':
-            return jsonify(error='Forbidden'), 403
-        rows = rows_to_list(conn.execute(
-            "SELECT * FROM password_resets ORDER BY created_at DESC").fetchall())
+        if me['role'] != 'admin': return jsonify(error='Forbidden'), 403
+        rows = rows_to_list(conn.execute("SELECT * FROM password_resets ORDER BY created_at DESC").fetchall())
     return jsonify(rows)
 
 @app.route('/api/forgot-password/resolve/<int:rid>', methods=['POST'])
 @jwt_required()
 def resolve_reset(rid):
-    """Admin: approve a reset request and set a temporary password."""
     from datetime import datetime
     uid = int(get_jwt_identity())
     with get_db() as conn:
         me = row_to_dict(conn.execute("SELECT role FROM users WHERE id=?", (uid,)).fetchone())
-        if me['role'] != 'admin':
-            return jsonify(error='Forbidden'), 403
-        req = row_to_dict(conn.execute(
-            "SELECT * FROM password_resets WHERE id=?", (rid,)).fetchone())
-        if not req:
-            return jsonify(error='Request not found'), 404
+        if me['role'] != 'admin': return jsonify(error='Forbidden'), 403
+        req = row_to_dict(conn.execute("SELECT * FROM password_resets WHERE id=?", (rid,)).fetchone())
+        if not req: return jsonify(error='Request not found'), 404
         d = request.get_json() or {}
         temp_pw = (d.get('tempPassword') or '').strip()
         if not temp_pw or len(temp_pw) < 6:
             return jsonify(error='Temporary password must be at least 6 characters'), 400
-        # Set new password on the user — force them to change it again on next login
-        conn.execute(
-            "UPDATE users SET password_hash=?, must_change_password=1 WHERE username=?",
-            (hash_pass(temp_pw), req['username']))
-        conn.execute(
-            "UPDATE password_resets SET status='resolved', temp_password=?, resolved_at=? WHERE id=?",
-            (temp_pw, datetime.now().isoformat(), rid))
+        conn.execute("UPDATE users SET password_hash=?,must_change_password=1 WHERE username=?",
+                     (hash_pass(temp_pw), req['username']))
+        conn.execute("UPDATE password_resets SET status='resolved',temp_password=?,resolved_at=? WHERE id=?",
+                     (temp_pw, datetime.now().isoformat(), rid))
         conn.commit()
     return jsonify(ok=True, tempPassword=temp_pw)
 
 @app.route('/api/forgot-password/dismiss/<int:rid>', methods=['DELETE'])
 @jwt_required()
 def dismiss_reset(rid):
-    """Admin: dismiss/delete a reset request."""
     uid = int(get_jwt_identity())
     with get_db() as conn:
         me = row_to_dict(conn.execute("SELECT role FROM users WHERE id=?", (uid,)).fetchone())
-        if me['role'] != 'admin':
-            return jsonify(error='Forbidden'), 403
+        if me['role'] != 'admin': return jsonify(error='Forbidden'), 403
         conn.execute("DELETE FROM password_resets WHERE id=?", (rid,))
         conn.commit()
     return jsonify(ok=True)
 
-
-# ─── STATIC (serve the frontend HTML) ─────────────────────────────────────────
+# ─── STATIC ────────────────────────────────────────────────────────────────────
 
 @app.route('/')
 def index():
-    return send_from_directory('.', 'index.html')
+    # ── FIX: use BASE_DIR (absolute, anchored to this file) instead of '.' ────
+    return send_from_directory(BASE_DIR, 'index.html')
+
+# NOTE: klf-logo.webp and any other static assets sitting next to index.html
+# and server.py are now served automatically because static_folder=BASE_DIR
+# and static_url_path='' were set on the Flask app above — no extra route
+# is needed for them. If you add more assets (css/js/images) in this same
+# folder, they'll be reachable at "/<filename>" the same way.
 
 # ─── MAIN ──────────────────────────────────────────────────────────────────────
 
-# Initialise DB on import — works with both gunicorn (Render) and direct python server.py
 init_db()
 
 if __name__ == '__main__':
