@@ -404,6 +404,54 @@ textarea { resize: vertical; min-height: 78px; }
   border-bottom: 1px solid var(--gray-mid);
 }
 
+/* ─── INSTITUTION AUTOCOMPLETE (Kenya Data API + saved institutions) ────────── */
+.inst-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1.5px solid var(--gray-mid);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  max-height: 230px;
+  overflow-y: auto;
+  z-index: 60;
+  box-shadow: 0 8px 20px rgba(0,0,0,.1);
+}
+.inst-suggestion-item {
+  padding: 8px 11px;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--gray-light);
+}
+.inst-suggestion-item:last-child { border-bottom: none; }
+.inst-suggestion-item:hover { background: var(--blue-light); }
+.inst-suggestion-item .inst-name { font-weight: 600; color: var(--text); }
+.inst-suggestion-item .inst-county { font-size: 11px; color: var(--gray); margin-left: 6px; font-weight: 400; }
+.inst-src-tag {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.inst-src-tag.local  { background: var(--green-light); color: #15803d; }
+.inst-src-tag.remote { background: var(--blue-light);  color: #1d4ed8; }
+.inst-suggestion-empty, .inst-suggestion-loading {
+  padding: 10px 11px;
+  font-size: 12.5px;
+  color: var(--gray);
+}
+.inst-field-wrap { position: relative; }
+
 /* ─── FLASH MESSAGES ────────────────────────────────────────────────────────── */
 .flash {
   padding: 11px 15px;
@@ -1420,12 +1468,12 @@ function renderAttacheeForm(existing) {
   const instId = a.institution_id || a.institutionId;
   const supId  = a.supervisor_id  || a.supervisorId;
   const deptOpts   = DB.departments.map(d  => `<option value="${d.id}"${deptId === d.id ? ' selected' : ''}>${d.name}</option>`).join('');
-  const instOpts   = DB.institutions.map(i  => `<option value="${i.id}"${instId === i.id ? ' selected' : ''}>${i.name}</option>`).join('');
   const supOpts    = DB.supervisors.map(s   => `<option value="${s.id}"${supId  === s.id ? ' selected' : ''}>${s.name}</option>`).join('');
   const statusOpts = ['Active','Completed','Terminated','Deferred'].map(s => `<option${(a.status || 'Active') === s ? ' selected' : ''}>${s}</option>`).join('');
   const isEdit = !!existing;
   const fn = a.first_name || a.firstName || '';
   const ln = a.last_name  || a.lastName  || '';
+  const instName = instId ? (getInst(instId)?.name || '') : '';
 
   const html = `
     <div class="form-section-hd">Personal Information</div>
@@ -1442,7 +1490,14 @@ function renderAttacheeForm(existing) {
     </div>
     <div class="form-section-hd">Academic Details</div>
     <div class="form-grid">
-      <div class="form-group"><label>Institution</label><select id="f_inst"><option value="">— Select —</option>${instOpts}</select></div>
+      <div class="form-group inst-field-wrap">
+        <label>Institution</label>
+        <input type="text" id="f_inst_name" value="${instName}" autocomplete="off"
+               placeholder="Start typing an institution name…"
+               oninput="onInstitutionInput()" onfocus="onInstitutionInput()">
+        <input type="hidden" id="f_inst" value="${instId || ''}">
+        <div id="instSuggestions" class="inst-suggestions" style="display:none"></div>
+      </div>
       <div class="form-group"><label>Course <span class="req">*</span></label><input id="f_co" value="${a.course || ''}"></div>
       <div class="form-group"><label>Year of Study</label><input type="number" id="f_yr" min="1" max="6" value="${a.year_of_study || a.yearOfStudy || ''}"></div>
       <div class="form-group"><label>Reg No</label><input id="f_rg" value="${a.reg_no || a.regNo || ''}"></div>
@@ -1461,6 +1516,119 @@ function renderAttacheeForm(existing) {
       <button class="btn btn-ghost" onclick="showPage('${isEdit ? 'attachee-detail' : 'attachees'}')">Cancel</button>
     </div>`;
   document.getElementById(isEdit ? 'editAttacheeFormWrap' : 'addAttacheeFormWrap').innerHTML = html;
+
+  // Restore department/supervisor select values that only apply on edit
+  // (deptOpts/supOpts already mark "selected"; f_dp/f_sp are plain <select>s)
+}
+
+// ─── INSTITUTION AUTOCOMPLETE (Kenya Data API + locally saved institutions) ──
+let _instSearchTimer = null;
+
+function onInstitutionInput() {
+  clearTimeout(_instSearchTimer);
+  // Any manual edit invalidates a previously matched local id / staged remote pick
+  document.getElementById('f_inst').value = '';
+  delete document.getElementById('f_inst').dataset.pending;
+  const q = document.getElementById('f_inst_name').value.trim();
+  _instSearchTimer = setTimeout(() => renderInstSuggestions(q), 250);
+}
+
+async function renderInstSuggestions(q) {
+  const box = document.getElementById('instSuggestions');
+  if (!box) return;
+  if (!q) { box.style.display = 'none'; box.innerHTML = ''; return; }
+
+  box.innerHTML = '<div class="inst-suggestion-loading"><div class="spinner" style="width:13px;height:13px"></div> Searching…</div>';
+  box.style.display = 'block';
+
+  // 1) Institutions already saved in our own database
+  const ql = q.toLowerCase();
+  const localMatches = DB.institutions
+    .filter(i => i.name.toLowerCase().includes(ql))
+    .slice(0, 8)
+    .map(i => ({ id: i.id, name: i.name, type: i.type, county: i.county, contact: i.contact, email: i.email, _source: 'local' }));
+
+  // 2) Kenya Data API institutions (universities/colleges/TVETs) — best-effort
+  let remoteMatches = [];
+  try {
+    remoteMatches = await apiFetch(`/api/external/institutions?q=${encodeURIComponent(q)}`);
+  } catch { /* external lookup is best-effort; a failure here shouldn't block manual entry */ }
+
+  const localNamesLower = new Set(localMatches.map(i => i.name.toLowerCase()));
+  const merged = [
+    ...localMatches,
+    ...remoteMatches
+      .filter(r => r && r.name && !localNamesLower.has(r.name.toLowerCase()))
+      .map(r => ({ ...r, _source: 'remote' })),
+  ].slice(0, 12);
+
+  if (!merged.length) {
+    box.innerHTML = `<div class="inst-suggestion-empty">No matches found — saving will add "<strong>${q}</strong>" as a new institution</div>`;
+    box.style.display = 'block';
+    return;
+  }
+
+  box.innerHTML = merged.map((i, idx) => `
+    <div class="inst-suggestion-item" onclick="selectInstitution(${idx})">
+      <span class="inst-name">${i.name}${i.county ? `<span class="inst-county">${i.county}</span>` : ''}</span>
+      <span class="inst-src-tag ${i._source === 'local' ? 'local' : 'remote'}">${i._source === 'local' ? 'Saved' : 'Kenya API'}</span>
+    </div>`).join('');
+  box.style.display = 'block';
+  box._merged = merged; // stash for selectInstitution to read by index
+}
+
+function selectInstitution(idx) {
+  const box = document.getElementById('instSuggestions');
+  const i = box && box._merged ? box._merged[idx] : null;
+  if (!i) return;
+  document.getElementById('f_inst_name').value = i.name;
+  const idField = document.getElementById('f_inst');
+  if (i._source === 'local') {
+    idField.value = i.id;
+    delete idField.dataset.pending;
+  } else {
+    idField.value = '';
+    idField.dataset.pending = JSON.stringify({
+      name: i.name, type: i.type || '', county: i.county || '',
+      contact: i.contact || '', email: i.email || '',
+    });
+  }
+  box.style.display = 'none';
+  box.innerHTML = '';
+}
+
+// Hide suggestions when clicking elsewhere
+document.addEventListener('click', e => {
+  const box = document.getElementById('instSuggestions');
+  if (box && box.style.display !== 'none' &&
+      !e.target.closest('.inst-field-wrap')) {
+    box.style.display = 'none';
+  }
+});
+
+// Resolves whatever is in the institution field to a saved institution id,
+// creating (and thereby auto-saving) a new institution record if needed.
+async function resolveInstitutionId() {
+  const nameField = document.getElementById('f_inst_name');
+  const idField    = document.getElementById('f_inst');
+  const name = (nameField?.value || '').trim();
+  if (!name) return null;
+
+  // Already resolved to a saved local institution (picked from suggestions)
+  if (idField.value) return parseInt(idField.value);
+
+  // Typed a name that already exists locally, even without picking it from the list
+  const existingLocal = DB.institutions.find(i => i.name.toLowerCase() === name.toLowerCase());
+  if (existingLocal) return existingLocal.id;
+
+  // Brand new institution — carry over any metadata staged from a Kenya API pick
+  let extra = {};
+  if (idField.dataset.pending) {
+    try { extra = JSON.parse(idField.dataset.pending); } catch { /* ignore malformed staging data */ }
+  }
+  const saved = await apiFetch('/api/institutions', { method: 'POST', body: { name, ...extra } });
+  if (!DB.institutions.some(i => i.id === saved.id)) DB.institutions.push(saved);
+  return saved.id;
 }
 
 function getFormVals(isEdit) {
@@ -1471,7 +1639,6 @@ function getFormVals(isEdit) {
     dob:           document.getElementById('f_dob').value,
     phone:         document.getElementById('f_ph').value.trim(),
     email:         document.getElementById('f_em').value.trim(),
-    institutionId: parseInt(document.getElementById('f_inst').value) || null,
     course:        document.getElementById('f_co').value.trim(),
     yearOfStudy:   parseInt(document.getElementById('f_yr').value) || null,
     regNo:         document.getElementById('f_rg').value.trim(),
@@ -1489,6 +1656,7 @@ async function doSaveAdd() {
   if (!v.firstName || !v.lastName || !v.startDate || !v.endDate) { showFlash('Fill all required fields.', 'danger'); return; }
   if (!v.phone) { showFlash('Phone number is required.', 'danger'); return; }
   try {
+    v.institutionId = await resolveInstitutionId();
     const newA = await apiFetch('/api/attachees', { method: 'POST', body: v });
     DB.attachees.push(newA);
     showFlash(`${v.firstName} ${v.lastName} added successfully.`);
@@ -1509,6 +1677,7 @@ async function doSaveEdit(id) {
   if (!v.phone) { showFlash('Phone number is required.', 'danger'); return; }
   const oldStatus = DB.attachees.find(a => a.id === id)?.status;
   try {
+    v.institutionId = await resolveInstitutionId();
     const updated = await apiFetch(`/api/attachees/${id}`, { method: 'PUT', body: v });
     DB.attachees = DB.attachees.map(a => a.id === id ? updated : a);
     if (v.status !== oldStatus && (v.status === 'Terminated' || v.status === 'Completed')) {

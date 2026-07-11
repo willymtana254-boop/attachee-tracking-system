@@ -3,8 +3,11 @@ Kilifi County ICT Attachee Tracking System — Backend API
 Run: python server.py
 """
 
-import sqlite3, hashlib, os, secrets, time
+import sqlite3, hashlib, os, secrets, time, json as _json
 from datetime import timedelta
+from urllib.request import urlopen, Request as _UrlRequest
+from urllib.parse import urlencode as _urlencode
+from urllib.error import URLError, HTTPError
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_jwt_extended import (
@@ -67,6 +70,79 @@ def rows_to_list(rows):
 def get_current_user(conn, uid):
     return row_to_dict(conn.execute(
         "SELECT role, supervisor_id FROM users WHERE id=?", (uid,)).fetchone())
+
+# ─── KENYA INSTITUTIONS API (external data source) ───────────────────────────
+# This wires up "Kenya Data API" (kenyaareadata.vercel.app), which exposes
+# Kenyan universities/colleges/TVETs alongside its counties/constituencies/wards
+# endpoint. The public key can be overridden via an env var without touching
+# code. NOTE: the exact JSON field names this endpoint returns weren't
+# independently confirmed, so _normalize_institution() below defensively
+# checks several likely variants (name/institutionName/institution,
+# type/category, county/location, contact/phone). If your real responses use
+# different field names, this is the one place to adjust.
+KENYA_INSTITUTIONS_API_URL = os.environ.get(
+    'KENYA_INSTITUTIONS_API_URL', 'https://kenyaareadata.vercel.app/api/institutions')
+KENYA_INSTITUTIONS_API_KEY = os.environ.get(
+    'KENYA_INSTITUTIONS_API_KEY', 'keypubinsti1569ftyf555cfcfj88')
+
+_kenya_inst_cache = {'data': None, 'ts': 0}
+_KENYA_INST_CACHE_TTL = 3600  # seconds — institution lists barely change; avoid hammering the external API on every keystroke
+
+def _normalize_institution(item):
+    if isinstance(item, str):
+        return {'name': item.strip(), 'type': '', 'county': '', 'contact': '', 'email': ''}
+    if not isinstance(item, dict):
+        return None
+    name = (item.get('name') or item.get('institutionName') or
+            item.get('institution') or item.get('title') or '').strip()
+    if not name:
+        return None
+    return {
+        'name':    name,
+        'type':    item.get('type') or item.get('category') or item.get('institutionType') or '',
+        'county':  item.get('county') or item.get('location') or item.get('region') or '',
+        'contact': item.get('contact') or item.get('phone') or item.get('telephone') or '',
+        'email':   item.get('email') or '',
+    }
+
+def _fetch_kenya_institutions_raw():
+    url = KENYA_INSTITUTIONS_API_URL + '?' + _urlencode({'apiKey': KENYA_INSTITUTIONS_API_KEY})
+    req = _UrlRequest(url, headers={'User-Agent': 'KilifiICTAttacheeSystem/1.0', 'Accept': 'application/json'})
+    with urlopen(req, timeout=8) as resp:
+        return _json.loads(resp.read().decode('utf-8'))
+
+def get_kenya_institutions():
+    """Returns a flat, normalized, cached list of institutions from the Kenya Data API."""
+    now = time.time()
+    if _kenya_inst_cache['data'] is not None and (now - _kenya_inst_cache['ts']) < _KENYA_INST_CACHE_TTL:
+        return _kenya_inst_cache['data']
+
+    raw = _fetch_kenya_institutions_raw()
+
+    # The API's institutions payload shape wasn't independently confirmed, so
+    # handle the common possibilities: a bare list, {"institutions": [...]},
+    # {"data": [...]}, or a dict keyed by category/county with list values.
+    items = []
+    if isinstance(raw, list):
+        items = raw
+    elif isinstance(raw, dict):
+        items = raw.get('institutions') or raw.get('data') or raw.get('results') or []
+        if not items:
+            for v in raw.values():
+                if isinstance(v, list):
+                    items.extend(v)
+
+    normalized = []
+    seen = set()
+    for it in items:
+        n = _normalize_institution(it)
+        if n and n['name'].lower() not in seen:
+            seen.add(n['name'].lower())
+            normalized.append(n)
+
+    _kenya_inst_cache['data'] = normalized
+    _kenya_inst_cache['ts'] = now
+    return normalized
 
 def attachee_visible_to(conn, uid, aid):
     user = get_current_user(conn, uid)
@@ -472,6 +548,25 @@ def update_institution(iid):
         conn.commit()
         row = row_to_dict(conn.execute("SELECT * FROM institutions WHERE id=?", (iid,)).fetchone())
     return jsonify(row)
+
+@app.route('/api/external/institutions', methods=['GET'])
+@jwt_required()
+def search_external_institutions():
+    """Search Kenyan universities/colleges/TVETs from the Kenya Data API.
+    Used to power the autocomplete in the 'Institution' field when adding
+    an attachee. This never writes to our own database — picking a result
+    (or typing a brand-new name) is saved via POST /api/institutions, which
+    already de-duplicates by name."""
+    q = (request.args.get('q') or '').strip().lower()
+    try:
+        items = get_kenya_institutions()
+    except (URLError, HTTPError, TimeoutError, ValueError, OSError):
+        # Best-effort: if the external API is unreachable, fail quietly so the
+        # person can still type the institution name in by hand.
+        return jsonify([])
+    if q:
+        items = [i for i in items if q in i['name'].lower()]
+    return jsonify(items[:25])
 
 @app.route('/api/institutions/<int:iid>', methods=['DELETE'])
 @jwt_required()
