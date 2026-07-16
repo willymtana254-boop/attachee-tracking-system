@@ -69,7 +69,52 @@ def rows_to_list(rows):
 
 def get_current_user(conn, uid):
     return row_to_dict(conn.execute(
-        "SELECT role, supervisor_id FROM users WHERE id=?", (uid,)).fetchone())
+        "SELECT id, role, supervisor_id, parent_user_id FROM users WHERE id=?", (uid,)).fetchone())
+
+def requires_approval(user, action_type, target_table):
+    if not user: return False
+    # Stand-in users always require approval for write actions
+    if user['role'] in ('stand_in_admin', 'stand_in_supervisor'):
+        return True
+    # If a non-main admin adds a user
+    if target_table == 'users' and action_type == 'CREATE' and user['id'] != 1:
+        return True
+    return False
+
+def create_pending_approval(conn, action_type, target_table, target_id, payload, creator_id):
+    from datetime import datetime
+    conn.execute(
+        "INSERT INTO pending_approvals (action_type, target_table, target_id, payload, created_by, created_at, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')",
+        (action_type, target_table, target_id, _json.dumps(payload), creator_id, datetime.now().isoformat())
+    )
+    conn.commit()
+
+def execute_pending_action(conn, action):
+    action_type = action['action_type']
+    target_table = action['target_table']
+    target_id = action['target_id']
+    payload = _json.loads(action['payload'])
+    
+    VALID_TABLES = {'users', 'attachees', 'evaluations', 'documents', 'departments', 'supervisors', 'institutions'}
+    if target_table not in VALID_TABLES:
+        raise ValueError("Invalid target table")
+        
+    if action_type == 'CREATE':
+        keys = list(payload.keys())
+        columns = ", ".join(keys)
+        placeholders = ", ".join(["?"] * len(keys))
+        values = [payload[k] for k in keys]
+        query = f"INSERT INTO {target_table} ({columns}) VALUES ({placeholders})"
+        conn.execute(query, values)
+    elif action_type == 'UPDATE':
+        keys = list(payload.keys())
+        set_clause = ", ".join([f"{k}=?" for k in keys])
+        values = [payload[k] for k in keys] + [target_id]
+        query = f"UPDATE {target_table} SET {set_clause} WHERE id=?"
+        conn.execute(query, values)
+    elif action_type == 'DELETE':
+        query = f"DELETE FROM {target_table} WHERE id=?"
+        conn.execute(query, (target_id,))
 
 # ─── KENYA INSTITUTIONS API (external data source) ───────────────────────────
 # This wires up "Kenya Data API" (kenyaareadata.vercel.app), which exposes
@@ -149,7 +194,7 @@ def attachee_visible_to(conn, uid, aid):
     if not user: return None
     row = row_to_dict(conn.execute("SELECT * FROM attachees WHERE id=?", (aid,)).fetchone())
     if not row: return None
-    if user['role'] == 'supervisor' and user.get('supervisor_id'):
+    if user['role'] in ('supervisor', 'stand_in_supervisor') and user.get('supervisor_id'):
         if row.get('supervisor_id') != user['supervisor_id']: return None
     return row
 
@@ -237,6 +282,19 @@ CREATE TABLE IF NOT EXISTS password_resets (
     status TEXT DEFAULT 'pending',
     created_at TEXT NOT NULL,
     resolved_at TEXT DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS pending_approvals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    action_type TEXT NOT NULL,
+    target_table TEXT NOT NULL,
+    target_id INTEGER,
+    payload TEXT NOT NULL,
+    created_by INTEGER NOT NULL REFERENCES users(id),
+    created_at TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    resolved_by INTEGER REFERENCES users(id),
+    resolved_at TEXT,
+    rejection_reason TEXT DEFAULT ''
 );
 """
 
@@ -344,6 +402,7 @@ def init_db():
         for col_sql in [
             "ALTER TABLE users ADD COLUMN supervisor_id INTEGER REFERENCES supervisors(id)",
             "ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN parent_user_id INTEGER REFERENCES users(id)",
             # ── FIX: drop NOT NULL constraint on phone so old records can be edited ──
             # SQLite can't ALTER column constraints; we leave the column as DEFAULT ''
             # and handle it in application logic (phone optional on PUT, required on POST)
@@ -473,12 +532,18 @@ def get_departments():
 @app.route('/api/departments', methods=['POST'])
 @jwt_required()
 def add_department():
+    uid = int(get_jwt_identity())
     data = request.get_json()
     name = (data.get('name') or '').strip()
     if not name: return jsonify(error='Name required'), 400
     with get_db() as conn:
+        me = get_current_user(conn, uid)
+        payload = {'name': name, 'description': data.get('description','').strip()}
+        if requires_approval(me, 'CREATE', 'departments'):
+            create_pending_approval(conn, 'CREATE', 'departments', None, payload, uid)
+            return jsonify(pending=True, message='Action submitted for approval.'), 202
         cur = conn.execute("INSERT INTO departments(name,description) VALUES(?,?)",
-                           (name, data.get('description','').strip()))
+                           (name, payload['description']))
         conn.commit()
         row = row_to_dict(conn.execute("SELECT * FROM departments WHERE id=?", (cur.lastrowid,)).fetchone())
     return jsonify(row), 201
@@ -486,12 +551,18 @@ def add_department():
 @app.route('/api/departments/<int:did>', methods=['PUT'])
 @jwt_required()
 def update_department(did):
+    uid = int(get_jwt_identity())
     data = request.get_json()
     name = (data.get('name') or '').strip()
     if not name: return jsonify(error='Name required'), 400
     with get_db() as conn:
+        me = get_current_user(conn, uid)
+        payload = {'name': name, 'description': data.get('description','').strip()}
+        if requires_approval(me, 'UPDATE', 'departments'):
+            create_pending_approval(conn, 'UPDATE', 'departments', did, payload, uid)
+            return jsonify(pending=True, message='Action submitted for approval.'), 202
         conn.execute("UPDATE departments SET name=?,description=? WHERE id=?",
-                     (name, data.get('description','').strip(), did))
+                     (name, payload['description'], did))
         conn.commit()
         row = row_to_dict(conn.execute("SELECT * FROM departments WHERE id=?", (did,)).fetchone())
     return jsonify(row)
@@ -499,7 +570,12 @@ def update_department(did):
 @app.route('/api/departments/<int:did>', methods=['DELETE'])
 @jwt_required()
 def delete_department(did):
+    uid = int(get_jwt_identity())
     with get_db() as conn:
+        me = get_current_user(conn, uid)
+        if requires_approval(me, 'DELETE', 'departments'):
+            create_pending_approval(conn, 'DELETE', 'departments', did, {}, uid)
+            return jsonify(pending=True, message='Action submitted for approval.'), 202
         count = conn.execute("SELECT COUNT(*) FROM attachees WHERE department_id=?", (did,)).fetchone()[0]
         if count > 0: return jsonify(error=f'Cannot delete — {count} attachee(s) assigned'), 409
         conn.execute("DELETE FROM departments WHERE id=?", (did,))
@@ -518,10 +594,23 @@ def get_institutions():
 @app.route('/api/institutions', methods=['POST'])
 @jwt_required()
 def add_institution():
+    uid = int(get_jwt_identity())
     data = request.get_json()
     name = (data.get('name') or '').strip()
     if not name: return jsonify(error='Name required'), 400
     with get_db() as conn:
+        me = get_current_user(conn, uid)
+        payload = {
+            'name': name,
+            'type': data.get('type',''),
+            'county': data.get('county',''),
+            'contact': data.get('contact',''),
+            'email': data.get('email','')
+        }
+        if requires_approval(me, 'CREATE', 'institutions'):
+            create_pending_approval(conn, 'CREATE', 'institutions', None, payload, uid)
+            return jsonify(pending=True, message='Action submitted for approval.'), 202
+            
         # Return existing row if name already exists (prevents duplicates from manual entry)
         existing = row_to_dict(conn.execute(
             "SELECT * FROM institutions WHERE LOWER(name)=LOWER(?)", (name,)).fetchone())
@@ -529,8 +618,8 @@ def add_institution():
             return jsonify(existing), 200
         cur = conn.execute(
             "INSERT INTO institutions(name,type,county,contact,email) VALUES(?,?,?,?,?)",
-            (name, data.get('type',''), data.get('county',''),
-             data.get('contact',''), data.get('email','')))
+            (name, payload['type'], payload['county'],
+             payload['contact'], payload['email']))
         conn.commit()
         row = row_to_dict(conn.execute("SELECT * FROM institutions WHERE id=?", (cur.lastrowid,)).fetchone())
     return jsonify(row), 201
@@ -538,13 +627,25 @@ def add_institution():
 @app.route('/api/institutions/<int:iid>', methods=['PUT'])
 @jwt_required()
 def update_institution(iid):
+    uid = int(get_jwt_identity())
     data = request.get_json()
     name = (data.get('name') or '').strip()
     if not name: return jsonify(error='Name required'), 400
     with get_db() as conn:
+        me = get_current_user(conn, uid)
+        payload = {
+            'name': name,
+            'type': data.get('type',''),
+            'county': data.get('county',''),
+            'contact': data.get('contact',''),
+            'email': data.get('email','')
+        }
+        if requires_approval(me, 'UPDATE', 'institutions'):
+            create_pending_approval(conn, 'UPDATE', 'institutions', iid, payload, uid)
+            return jsonify(pending=True, message='Action submitted for approval.'), 202
         conn.execute("UPDATE institutions SET name=?,type=?,county=?,contact=?,email=? WHERE id=?",
-                     (name, data.get('type',''), data.get('county',''),
-                      data.get('contact',''), data.get('email',''), iid))
+                     (name, payload['type'], payload['county'],
+                      payload['contact'], payload['email'], iid))
         conn.commit()
         row = row_to_dict(conn.execute("SELECT * FROM institutions WHERE id=?", (iid,)).fetchone())
     return jsonify(row)
@@ -571,7 +672,12 @@ def search_external_institutions():
 @app.route('/api/institutions/<int:iid>', methods=['DELETE'])
 @jwt_required()
 def delete_institution(iid):
+    uid = int(get_jwt_identity())
     with get_db() as conn:
+        me = get_current_user(conn, uid)
+        if requires_approval(me, 'DELETE', 'institutions'):
+            create_pending_approval(conn, 'DELETE', 'institutions', iid, {}, uid)
+            return jsonify(pending=True, message='Action submitted for approval.'), 202
         count = conn.execute("SELECT COUNT(*) FROM attachees WHERE institution_id=?", (iid,)).fetchone()[0]
         if count > 0: return jsonify(error=f'Cannot delete — {count} attachee(s) assigned'), 409
         conn.execute("DELETE FROM institutions WHERE id=?", (iid,))
@@ -590,14 +696,26 @@ def get_supervisors():
 @app.route('/api/supervisors', methods=['POST'])
 @jwt_required()
 def add_supervisor():
+    uid = int(get_jwt_identity())
     data = request.get_json()
     name = (data.get('name') or '').strip()
     if not name: return jsonify(error='Name required'), 400
     with get_db() as conn:
+        me = get_current_user(conn, uid)
+        payload = {
+            'name': name,
+            'department_id': data.get('departmentId'),
+            'job_title': data.get('jobTitle','ICT Officer'),
+            'phone': data.get('phone',''),
+            'email': data.get('email','')
+        }
+        if requires_approval(me, 'CREATE', 'supervisors'):
+            create_pending_approval(conn, 'CREATE', 'supervisors', None, payload, uid)
+            return jsonify(pending=True, message='Action submitted for approval.'), 202
         cur = conn.execute(
             "INSERT INTO supervisors(name,department_id,job_title,phone,email) VALUES(?,?,?,?,?)",
-            (name, data.get('departmentId'), data.get('jobTitle','ICT Officer'),
-             data.get('phone',''), data.get('email','')))
+            (name, payload['department_id'], payload['job_title'],
+             payload['phone'], payload['email']))
         conn.commit()
         row = row_to_dict(conn.execute("SELECT * FROM supervisors WHERE id=?", (cur.lastrowid,)).fetchone())
     return jsonify(row), 201
@@ -605,7 +723,12 @@ def add_supervisor():
 @app.route('/api/supervisors/<int:sid>', methods=['DELETE'])
 @jwt_required()
 def delete_supervisor(sid):
+    uid = int(get_jwt_identity())
     with get_db() as conn:
+        me = get_current_user(conn, uid)
+        if requires_approval(me, 'DELETE', 'supervisors'):
+            create_pending_approval(conn, 'DELETE', 'supervisors', sid, {}, uid)
+            return jsonify(pending=True, message='Action submitted for approval.'), 202
         count = conn.execute("SELECT COUNT(*) FROM attachees WHERE supervisor_id=?", (sid,)).fetchone()[0]
         if count > 0: return jsonify(error=f'Cannot delete — {count} attachee(s) assigned'), 409
         conn.execute("DELETE FROM supervisors WHERE id=?", (sid,))
@@ -625,7 +748,7 @@ def get_attachees():
         conn.execute("UPDATE attachees SET status='Active' WHERE end_date >= ? AND start_date <= ? AND status='Completed'", (today, today))
         conn.commit()
         user = row_to_dict(conn.execute("SELECT role, supervisor_id FROM users WHERE id=?", (uid,)).fetchone())
-        if user['role'] == 'supervisor' and user.get('supervisor_id'):
+        if user['role'] in ('supervisor', 'stand_in_supervisor') and user.get('supervisor_id'):
             rows = rows_to_list(conn.execute(
                 "SELECT * FROM attachees WHERE supervisor_id=? ORDER BY first_name,last_name",
                 (user['supervisor_id'],)).fetchall())
@@ -650,17 +773,41 @@ def add_attachee():
     with get_db() as conn:
         me = get_current_user(conn, uid)
         supervisor_id = d.get('supervisorId')
-        if me and me['role'] == 'supervisor' and me.get('supervisor_id'):
+        if me and me['role'] in ('supervisor', 'stand_in_supervisor') and me.get('supervisor_id'):
             supervisor_id = me['supervisor_id']
+            
+        payload = {
+            'first_name': fn,
+            'last_name': ln,
+            'gender': d.get('gender',''),
+            'dob': d.get('dob',''),
+            'phone': phone,
+            'email': d.get('email',''),
+            'institution_id': d.get('institutionId'),
+            'course': d.get('course',''),
+            'year_of_study': d.get('yearOfStudy'),
+            'reg_no': d.get('regNo',''),
+            'department_id': d.get('departmentId'),
+            'supervisor_id': supervisor_id,
+            'start_date': d['startDate'],
+            'end_date': d['endDate'],
+            'status': d.get('status','Active'),
+            'notes': d.get('notes','')
+        }
+        
+        if requires_approval(me, 'CREATE', 'attachees'):
+            create_pending_approval(conn, 'CREATE', 'attachees', None, payload, uid)
+            return jsonify(pending=True, message='Action submitted for approval.'), 202
+            
         cur = conn.execute("""
             INSERT INTO attachees(first_name,last_name,gender,dob,phone,email,
             institution_id,course,year_of_study,reg_no,department_id,supervisor_id,
             start_date,end_date,status,notes)
             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (fn, ln, d.get('gender',''), d.get('dob',''), phone, d.get('email',''),
-             d.get('institutionId'), d.get('course',''), d.get('yearOfStudy'),
-             d.get('regNo',''), d.get('departmentId'), supervisor_id,
-             d['startDate'], d['endDate'], d.get('status','Active'), d.get('notes','')))
+            (fn, ln, payload['gender'], payload['dob'], phone, payload['email'],
+             payload['institution_id'], payload['course'], payload['year_of_study'],
+             payload['reg_no'], payload['department_id'], supervisor_id,
+             payload['start_date'], payload['end_date'], payload['status'], payload['notes']))
         conn.commit()
         row = row_to_dict(conn.execute("SELECT * FROM attachees WHERE id=?", (cur.lastrowid,)).fetchone())
     return jsonify(row), 201
@@ -689,24 +836,45 @@ def update_attachee(aid):
 
         me = get_current_user(conn, uid)
         supervisor_id = d.get('supervisorId')
-        if me and me['role'] == 'supervisor' and me.get('supervisor_id'):
+        if me and me['role'] in ('supervisor', 'stand_in_supervisor') and me.get('supervisor_id'):
             supervisor_id = me['supervisor_id']
 
-        # ── FIX: phone is optional on edit — fall back to stored value ────────
         phone = (d.get('phone') or '').strip()
         if not phone:
             phone = existing.get('phone') or ''
-        # ──────────────────────────────────────────────────────────────────────
+
+        payload = {
+            'first_name': fn,
+            'last_name': ln,
+            'gender': d.get('gender',''),
+            'dob': d.get('dob',''),
+            'phone': phone,
+            'email': d.get('email',''),
+            'institution_id': d.get('institutionId'),
+            'course': d.get('course',''),
+            'year_of_study': d.get('yearOfStudy'),
+            'reg_no': d.get('regNo',''),
+            'department_id': d.get('departmentId'),
+            'supervisor_id': supervisor_id,
+            'start_date': d.get('startDate'),
+            'end_date': d.get('endDate'),
+            'status': d.get('status','Active'),
+            'notes': d.get('notes','')
+        }
+
+        if requires_approval(me, 'UPDATE', 'attachees'):
+            create_pending_approval(conn, 'UPDATE', 'attachees', aid, payload, uid)
+            return jsonify(pending=True, message='Action submitted for approval.'), 202
 
         conn.execute("""
             UPDATE attachees SET first_name=?,last_name=?,gender=?,dob=?,phone=?,email=?,
             institution_id=?,course=?,year_of_study=?,reg_no=?,department_id=?,supervisor_id=?,
             start_date=?,end_date=?,status=?,notes=? WHERE id=?""",
-            (fn, ln, d.get('gender',''), d.get('dob',''), phone, d.get('email',''),
-             d.get('institutionId'), d.get('course',''), d.get('yearOfStudy'),
-             d.get('regNo',''), d.get('departmentId'), supervisor_id,
-             d.get('startDate'), d.get('endDate'), d.get('status','Active'),
-             d.get('notes',''), aid))
+            (fn, ln, payload['gender'], payload['dob'], phone, payload['email'],
+             payload['institution_id'], payload['course'], payload['year_of_study'],
+             payload['reg_no'], payload['department_id'], supervisor_id,
+             payload['start_date'], payload['end_date'], payload['status'],
+             payload['notes'], aid))
         conn.commit()
         row = row_to_dict(conn.execute("SELECT * FROM attachees WHERE id=?", (aid,)).fetchone())
     return jsonify(row)
@@ -717,7 +885,12 @@ def delete_attachee(aid):
     uid = int(get_jwt_identity())
     with get_db() as conn:
         me = get_current_user(conn, uid)
-        if not me or me['role'] != 'admin': return jsonify(error='Forbidden'), 403
+        if not me or me['role'] not in ('admin', 'stand_in_admin'): return jsonify(error='Forbidden'), 403
+        
+        if requires_approval(me, 'DELETE', 'attachees'):
+            create_pending_approval(conn, 'DELETE', 'attachees', aid, {}, uid)
+            return jsonify(pending=True, message='Action submitted for approval.'), 202
+            
         conn.execute("DELETE FROM attachees WHERE id=?", (aid,))
         conn.commit()
     return jsonify(ok=True)
@@ -741,21 +914,39 @@ def add_eval(aid):
     d = request.get_json()
     with get_db() as conn:
         if not attachee_visible_to(conn, uid, aid): return jsonify(error='Not found'), 404
-        # ── FIX: supervisor's evaluated_by is always their own record ─────────
-        evaluated_by = d.get('evaluatedBy')
         me = get_current_user(conn, uid)
-        if me and me['role'] == 'supervisor' and me.get('supervisor_id'):
+        evaluated_by = d.get('evaluatedBy')
+        if me and me['role'] in ('supervisor', 'stand_in_supervisor') and me.get('supervisor_id'):
             evaluated_by = me['supervisor_id']
-        # ──────────────────────────────────────────────────────────────────────
+            
+        payload = {
+            'attachee_id': aid,
+            'date': d.get('date'),
+            'type': d.get('type','Monthly'),
+            'score': d.get('score',0),
+            'performance': d.get('performance','Good'),
+            'attendance': d.get('attendance',100),
+            'technical_skills': d.get('technicalSkills',''),
+            'communication': d.get('communication',''),
+            'punctuality': d.get('punctuality',''),
+            'team_work': d.get('teamWork',''),
+            'remarks': d.get('remarks',''),
+            'evaluated_by': evaluated_by
+        }
+        
+        if requires_approval(me, 'CREATE', 'evaluations'):
+            create_pending_approval(conn, 'CREATE', 'evaluations', None, payload, uid)
+            return jsonify(pending=True, message='Action submitted for approval.'), 202
+            
         cur = conn.execute("""
             INSERT INTO evaluations(attachee_id,date,type,score,performance,attendance,
             technical_skills,communication,punctuality,team_work,remarks,evaluated_by)
             VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (aid, d.get('date'), d.get('type','Monthly'), d.get('score',0),
-             d.get('performance','Good'), d.get('attendance',100),
-             d.get('technicalSkills',''), d.get('communication',''),
-             d.get('punctuality',''), d.get('teamWork',''),
-             d.get('remarks',''), evaluated_by))
+            (aid, payload['date'], payload['type'], payload['score'],
+             payload['performance'], payload['attendance'],
+             payload['technical_skills'], payload['communication'],
+             payload['punctuality'], payload['team_work'],
+             payload['remarks'], evaluated_by))
         conn.commit()
         row = row_to_dict(conn.execute("SELECT * FROM evaluations WHERE id=?", (cur.lastrowid,)).fetchone())
     return jsonify(row), 201
@@ -767,18 +958,37 @@ def update_eval(aid, eid):
     d = request.get_json()
     with get_db() as conn:
         if not attachee_visible_to(conn, uid, aid): return jsonify(error='Not found'), 404
-        evaluated_by = d.get('evaluatedBy')
         me = get_current_user(conn, uid)
-        if me and me['role'] == 'supervisor' and me.get('supervisor_id'):
+        evaluated_by = d.get('evaluatedBy')
+        if me and me['role'] in ('supervisor', 'stand_in_supervisor') and me.get('supervisor_id'):
             evaluated_by = me['supervisor_id']
+            
+        payload = {
+            'date': d.get('date'),
+            'type': d.get('type','Monthly'),
+            'score': d.get('score',0),
+            'performance': d.get('performance','Good'),
+            'attendance': d.get('attendance',100),
+            'technical_skills': d.get('technicalSkills',''),
+            'communication': d.get('communication',''),
+            'punctuality': d.get('punctuality',''),
+            'team_work': d.get('teamWork',''),
+            'remarks': d.get('remarks',''),
+            'evaluated_by': evaluated_by
+        }
+        
+        if requires_approval(me, 'UPDATE', 'evaluations'):
+            create_pending_approval(conn, 'UPDATE', 'evaluations', eid, payload, uid)
+            return jsonify(pending=True, message='Action submitted for approval.'), 202
+            
         conn.execute("""UPDATE evaluations SET date=?,type=?,score=?,performance=?,attendance=?,
             technical_skills=?,communication=?,punctuality=?,team_work=?,remarks=?,evaluated_by=?
             WHERE id=? AND attachee_id=?""",
-            (d.get('date'), d.get('type','Monthly'), d.get('score',0),
-             d.get('performance','Good'), d.get('attendance',100),
-             d.get('technicalSkills',''), d.get('communication',''),
-             d.get('punctuality',''), d.get('teamWork',''),
-             d.get('remarks',''), evaluated_by, eid, aid))
+            (payload['date'], payload['type'], payload['score'],
+             payload['performance'], payload['attendance'],
+             payload['technical_skills'], payload['communication'],
+             payload['punctuality'], payload['team_work'],
+             payload['remarks'], evaluated_by, eid, aid))
         conn.commit()
         row = row_to_dict(conn.execute("SELECT * FROM evaluations WHERE id=?", (eid,)).fetchone())
     return jsonify(row)
@@ -789,6 +999,11 @@ def delete_eval(aid, eid):
     uid = int(get_jwt_identity())
     with get_db() as conn:
         if not attachee_visible_to(conn, uid, aid): return jsonify(error='Not found'), 404
+        me = get_current_user(conn, uid)
+        if requires_approval(me, 'DELETE', 'evaluations'):
+            create_pending_approval(conn, 'DELETE', 'evaluations', eid, {}, uid)
+            return jsonify(pending=True, message='Action submitted for approval.'), 202
+            
         conn.execute("DELETE FROM evaluations WHERE id=? AND attachee_id=?", (eid, aid))
         conn.commit()
     return jsonify(ok=True)
@@ -814,9 +1029,22 @@ def add_doc(aid):
     if not name: return jsonify(error='File name required'), 400
     with get_db() as conn:
         if not attachee_visible_to(conn, uid, aid): return jsonify(error='Not found'), 404
+        me = get_current_user(conn, uid)
+        payload = {
+            'attachee_id': aid,
+            'doc_type': d.get('docType',''),
+            'file_name': name,
+            'issued_date': d.get('issuedDate',''),
+            'notes': d.get('notes','')
+        }
+        if requires_approval(me, 'CREATE', 'documents'):
+            create_pending_approval(conn, 'CREATE', 'documents', None, payload, uid)
+            return jsonify(pending=True, message='Action submitted for approval.'), 202
+            
         cur = conn.execute(
             "INSERT INTO documents(attachee_id,doc_type,file_name,issued_date,notes) VALUES(?,?,?,?,?)",
-            (aid, d.get('docType',''), name, d.get('issuedDate',''), d.get('notes','')))
+            (aid, payload['doc_type'], payload['file_name'],
+             payload['issued_date'], payload['notes']))
         conn.commit()
         row = row_to_dict(conn.execute("SELECT * FROM documents WHERE id=?", (cur.lastrowid,)).fetchone())
     return jsonify(row), 201
@@ -828,8 +1056,8 @@ def add_doc(aid):
 def get_users():
     uid = int(get_jwt_identity())
     with get_db() as conn:
-        me = row_to_dict(conn.execute("SELECT role FROM users WHERE id=?", (uid,)).fetchone())
-        if me['role'] != 'admin': return jsonify(error='Forbidden'), 403
+        me = get_current_user(conn, uid)
+        if me['role'] not in ('admin', 'stand_in_admin'): return jsonify(error='Forbidden'), 403
         rows = rows_to_list(conn.execute(
             "SELECT id,username,full_name,email,role FROM users ORDER BY username").fetchall())
     return jsonify(rows)
@@ -839,18 +1067,57 @@ def get_users():
 def add_user():
     uid = int(get_jwt_identity())
     with get_db() as conn:
-        me = row_to_dict(conn.execute("SELECT role FROM users WHERE id=?", (uid,)).fetchone())
-        if me['role'] != 'admin': return jsonify(error='Forbidden'), 403
+        me = get_current_user(conn, uid)
         d         = request.get_json()
         username  = (d.get('username')  or '').strip()
         full_name = (d.get('fullName')  or '').strip()
         password  = d.get('password')   or ''
+        role      = d.get('role', 'viewer')
+        
+        is_admin_or_stand_in_admin = me['role'] in ('admin', 'stand_in_admin')
+        is_supervisor_adding_stand_in = (me['role'] == 'supervisor' and role == 'stand_in_supervisor')
+        is_main_admin_adding_stand_in_admin = (me['role'] == 'admin' and me['id'] == 1 and role == 'stand_in_admin')
+
+        if role == 'stand_in_admin':
+            # Only the main admin (id 1) may create a stand-in admin
+            if not is_main_admin_adding_stand_in_admin:
+                return jsonify(error='Forbidden: only the main admin can add a stand-in admin'), 403
+        else:
+            # Any admin or stand-in admin can add a viewer or supervisor; a supervisor can add their own stand-in
+            if not is_admin_or_stand_in_admin and not is_supervisor_adding_stand_in:
+                return jsonify(error='Forbidden'), 403
+            
         if not username or not full_name or not password:
             return jsonify(error='Username, name and password required'), 400
+            
+        parent_user_id = uid
+        supervisor_id = d.get('supervisorId')
+        if me['role'] == 'supervisor':
+            supervisor_id = me['supervisor_id']
+            
+        payload = {
+            'username': username,
+            'full_name': full_name,
+            'email': d.get('email', ''),
+            'password_hash': hash_pass(password),
+            'role': role,
+            'supervisor_id': supervisor_id,
+            'must_change_password': 1,
+            'parent_user_id': parent_user_id
+        }
+        
+        if requires_approval(me, 'CREATE', 'users'):
+            # Check unique username first to prevent duplicate entries in draft
+            existing_user = conn.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
+            if existing_user:
+                return jsonify(error='Username already exists'), 409
+            create_pending_approval(conn, 'CREATE', 'users', None, payload, uid)
+            return jsonify(pending=True, message='User creation request submitted for admin approval.'), 202
+            
         try:
             cur = conn.execute(
-                "INSERT INTO users(username,full_name,email,password_hash,role,must_change_password) VALUES(?,?,?,?,?,1)",
-                (username, full_name, d.get('email',''), hash_pass(password), d.get('role','viewer')))
+                "INSERT INTO users(username,full_name,email,password_hash,role,must_change_password,supervisor_id,parent_user_id) VALUES(?,?,?,?,?,?,?,?)",
+                (username, full_name, payload['email'], payload['password_hash'], role, 1, supervisor_id, parent_user_id))
             conn.commit()
             row = row_to_dict(conn.execute(
                 "SELECT id,username,full_name,email,role FROM users WHERE id=?", (cur.lastrowid,)).fetchone())
@@ -864,8 +1131,13 @@ def delete_user(uid2):
     uid = int(get_jwt_identity())
     if uid == uid2: return jsonify(error='Cannot delete yourself'), 400
     with get_db() as conn:
-        me = row_to_dict(conn.execute("SELECT role FROM users WHERE id=?", (uid,)).fetchone())
-        if me['role'] != 'admin': return jsonify(error='Forbidden'), 403
+        me = get_current_user(conn, uid)
+        if me['role'] not in ('admin', 'stand_in_admin'): return jsonify(error='Forbidden'), 403
+        
+        if requires_approval(me, 'DELETE', 'users'):
+            create_pending_approval(conn, 'DELETE', 'users', uid2, {}, uid)
+            return jsonify(pending=True, message='User deletion request submitted for admin approval.'), 202
+            
         conn.execute("DELETE FROM users WHERE id=?", (uid2,))
         conn.commit()
     return jsonify(ok=True)
@@ -929,6 +1201,114 @@ def dismiss_reset(rid):
         me = row_to_dict(conn.execute("SELECT role FROM users WHERE id=?", (uid,)).fetchone())
         if me['role'] != 'admin': return jsonify(error='Forbidden'), 403
         conn.execute("DELETE FROM password_resets WHERE id=?", (rid,))
+        conn.commit()
+    return jsonify(ok=True)
+
+# ─── APPROVALS SYSTEM ─────────────────────────────────────────────────────────
+
+@app.route('/api/approvals', methods=['GET'])
+@jwt_required()
+def get_approvals():
+    uid = int(get_jwt_identity())
+    with get_db() as conn:
+        me = get_current_user(conn, uid)
+        if not me: return jsonify(error='Not found'), 404
+        
+        # Determine query based on role
+        if me['role'] == 'admin' and me['id'] == 1:
+            # Main Admin sees all
+            rows = conn.execute("""
+                SELECT p.*, u.full_name AS creator_name, u.role AS creator_role
+                FROM pending_approvals p
+                JOIN users u ON u.id = p.created_by
+                ORDER BY p.created_at DESC
+            """).fetchall()
+        elif me['role'] == 'supervisor':
+            # Main Supervisor sees approvals from their stand-ins
+            rows = conn.execute("""
+                SELECT p.*, u.full_name AS creator_name, u.role AS creator_role
+                FROM pending_approvals p
+                JOIN users u ON u.id = p.created_by
+                WHERE u.parent_user_id = ?
+                ORDER BY p.created_at DESC
+            """, (uid,)).fetchall()
+        else:
+            # Stand-in users see their own submissions
+            rows = conn.execute("""
+                SELECT p.*, u.full_name AS creator_name, u.role AS creator_role
+                FROM pending_approvals p
+                JOIN users u ON u.id = p.created_by
+                WHERE p.created_by = ?
+                ORDER BY p.created_at DESC
+            """, (uid,)).fetchall()
+            
+        res = []
+        for r in rows:
+            d = dict(r)
+            # Try to enrich payload for preview
+            try:
+                d['parsed_payload'] = _json.loads(d['payload'])
+            except Exception:
+                d['parsed_payload'] = {}
+            res.append(d)
+            
+    return jsonify(res)
+
+@app.route('/api/approvals/<int:apid>/resolve', methods=['POST'])
+@jwt_required()
+def resolve_approval(apid):
+    from datetime import datetime
+    uid = int(get_jwt_identity())
+    data = request.get_json() or {}
+    status = data.get('status')
+    rejection_reason = data.get('rejectionReason', '').strip()
+    
+    if status not in ('approved', 'rejected'):
+        return jsonify(error='Status must be approved or rejected'), 400
+        
+    with get_db() as conn:
+        me = get_current_user(conn, uid)
+        if not me: return jsonify(error='Not found'), 404
+        
+        approval = row_to_dict(conn.execute("SELECT * FROM pending_approvals WHERE id=?", (apid,)).fetchone())
+        if not approval:
+            return jsonify(error='Approval request not found'), 404
+            
+        if approval['status'] != 'pending':
+            return jsonify(error='Approval request already resolved'), 400
+            
+        creator = row_to_dict(conn.execute("SELECT id, role, parent_user_id FROM users WHERE id=?", (approval['created_by'],)).fetchone())
+        if not creator:
+            return jsonify(error='Creator not found'), 404
+            
+        # Check permissions:
+        # Main Admin (ID=1) can resolve anything.
+        # Main Supervisor can resolve if they are the parent of the creator.
+        is_authorized = False
+        if me['role'] == 'admin' and me['id'] == 1:
+            is_authorized = True
+        elif me['role'] == 'supervisor' and creator['parent_user_id'] == uid:
+            is_authorized = True
+            
+        if not is_authorized:
+            return jsonify(error='Forbidden'), 403
+            
+        resolved_at = datetime.now().isoformat()
+        if status == 'approved':
+            try:
+                execute_pending_action(conn, approval)
+                conn.execute(
+                    "UPDATE pending_approvals SET status='approved', resolved_by=?, resolved_at=? WHERE id=?",
+                    (uid, resolved_at, apid)
+                )
+            except Exception as e:
+                return jsonify(error=f"Error executing action: {str(e)}"), 500
+        else:
+            conn.execute(
+                "UPDATE pending_approvals SET status='rejected', resolved_by=?, resolved_at=?, rejection_reason=? WHERE id=?",
+                (uid, resolved_at, rejection_reason, apid)
+            )
+            
         conn.commit()
     return jsonify(ok=True)
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kilifi County ICT Attachees' Portal</title>
+  <title>Kilifi County ICT Attachee Tracking System</title>
 <style>
 /* ═══════════════════════════════════════════════════════════════
    Kilifi County ICT Attachee Tracking System — styles.css
@@ -13,17 +13,17 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --navy:        #00bef7;
-  --blue:        #00bef7;
+  --navy:        #1a3c5e;
+  --blue:        #1565c0;
   --blue-light:  #dbeafe;
   --blue-mid:    #7ec8e3;
-  --green:       #00eb00;
+  --green:       #1e7d32;
   --green-light: #dcfce7;
   --green-mid:   #6fcf7d;
-  --amber:       #eba200;
+  --amber:       #e8860d;
   --amber-light: #fef3c7;
-  --amber-mid:   #eba200;
-  --red:         #00eb00;
+  --amber-mid:   #f6a93c;
+  --red:         #dc2626;
   --red-light:   #fee2e2;
   --gray:        #64748b;
   --gray-light:  #f1f5f9;
@@ -34,8 +34,8 @@
   /* Kilifi coat-of-arms accent ramp: sunburst orange → palm green → wave blue */
   --kilifi-orange: #f5811f;
   --kilifi-orange-deep: #e8860d;
-  --kilifi-green:  #00eb00;
-  --kilifi-blue:   #00bef7;
+  --kilifi-green:  #1e7d32;
+  --kilifi-blue:   #1565c0;
   --kilifi-navy:   #16243a;
 }
 
@@ -51,7 +51,7 @@ button, input, select, textarea { font-family: inherit; }
 
 /* ─── SIDEBAR NAVIGATION ────────────────────────────────────────────────────── */
 .sidebar {
-  background: #00bef7;
+  background: var(--kilifi-navy);
   color: #fff;
   width: var(--sidebar-w);
   height: 100vh;
@@ -140,7 +140,7 @@ button, input, select, textarea { font-family: inherit; }
 
 .sidebar-add-btn {
   margin: 8px 10px 4px;
-  background: #00eb00;
+  background: var(--kilifi-green);
   border: none;
   color: #fff;
   padding: 10px 12px;
@@ -166,7 +166,7 @@ button, input, select, textarea { font-family: inherit; }
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #00eb00;
+  background: var(--kilifi-blue);
   color: #fff;
   display: flex;
   align-items: center;
@@ -192,7 +192,7 @@ button, input, select, textarea { font-family: inherit; }
 }
 .sidebar-footer-actions { display: flex; gap: 4px; }
 .sidebar-icon-btn {
-  background: #eba200;
+  background: transparent;
   border: none;
   color: #94a3b8;
   width: 28px;
@@ -763,10 +763,6 @@ textarea { resize: vertical; min-height: 78px; }
       <button class="sidebar-item" id="ndi-supervisors" onclick="showPage('supervisors')">
         <span class="sidebar-icon">&#128101;</span> Supervisors
       </button>
-      <button class="sidebar-item" id="ndi-approvals" onclick="showPage('approvals')" style="display:none">
-        <span class="sidebar-icon">&#9989;</span> Approvals
-        <span class="sidebar-badge" id="approvalsBadge" style="display:none">0</span>
-      </button>
 
       <div class="sidebar-label">Setup</div>
       <button class="sidebar-item" id="ndi-institutions" onclick="showPage('institutions')">
@@ -782,10 +778,6 @@ textarea { resize: vertical; min-height: 78px; }
       <div class="sidebar-label" id="adminLabel" style="display:none">Admin</div>
       <button class="sidebar-item" id="ndi-users" onclick="showPage('users')" style="display:none">
         <span class="sidebar-icon">&#128273;</span> Users
-      </button>
-      <button class="sidebar-item" id="ndi-admin-delegates" onclick="showPage('admin-delegates')" style="display:none">
-        <span class="sidebar-icon">&#128101;</span> Delegate Add Rights
-        <span class="sidebar-badge" id="adminDelBadge" style="display:none">!</span>
       </button>
       <button class="sidebar-item" id="ndi-export" onclick="exportCSV()" style="display:none">
         <span class="sidebar-icon">&#8659;</span> Export CSV
@@ -910,7 +902,6 @@ textarea { resize: vertical; min-height: 78px; }
         <div class="page-header">
           <div class="page-title">Supervisors</div>
           <button class="btn btn-primary btn-sm" id="addSupBtn" onclick="showPage('add-supervisor')">+ Add Supervisor</button>
-          <button class="btn btn-warning btn-sm" id="addStandInSupBtn" onclick="openAddStandInSupModal()" style="display:none">+ Add Stand-in Supervisor</button>
         </div>
         <div class="card" style="padding:0">
           <div class="table-wrap">
@@ -966,7 +957,6 @@ textarea { resize: vertical; min-height: 78px; }
         <div class="page-header">
           <div class="page-title">User Management</div>
           <button class="btn btn-primary btn-sm" onclick="showPage('add-user')">+ Add User</button>
-          <button class="btn btn-warning btn-sm" id="addStandInAdminBtn" onclick="openAddStandInAdminModal()" style="display:none">+ Add Stand-in Admin</button>
         </div>
         <div class="card" style="padding:0">
           <div class="table-wrap">
@@ -985,83 +975,6 @@ textarea { resize: vertical; min-height: 78px; }
           <button class="btn btn-ghost btn-sm" onclick="showPage('users')">&#8592; Cancel</button>
         </div>
         <div class="card"><div id="addUserWrap"></div></div>
-      </div>
-
-      <!-- ── APPROVALS CENTER ──────────────────────────────────────────────────── -->
-      <div id="page-approvals" class="page" style="display:none">
-        <div class="page-header">
-          <div class="page-title">&#9989; Approvals Center</div>
-        </div>
-
-        <div class="tab-container" style="display:flex;gap:12px;margin-bottom:16px;border-bottom:1px solid var(--gray-mid);padding-bottom:10px">
-          <button class="btn btn-sm btn-primary" id="btn-pending-approvals" onclick="setApprovalsTab('pending')">Pending Requests</button>
-          <button class="btn btn-sm btn-outline" id="btn-resolved-approvals" onclick="setApprovalsTab('resolved')">Resolved History</button>
-        </div>
-
-        <div id="approvals-pending-sec">
-          <div class="card" style="padding:0">
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>#</th><th>Date</th><th>Submitted By</th><th>Action</th><th>Target</th><th>Details</th><th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="approvalsPendingBody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <div id="approvals-resolved-sec" style="display:none">
-          <div class="card" style="padding:0">
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>#</th><th>Date</th><th>Submitted By</th><th>Action</th><th>Target</th><th>Details</th><th>Status</th><th>Resolved By/Date</th><th>Notes</th>
-                  </tr>
-                </thead>
-                <tbody id="approvalsResolvedBody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── ADMIN DELEGATION ──────────────────────────────────────────────────── -->
-      <div id="page-admin-delegates" class="page" style="display:none">
-        <div class="page-header">
-          <div class="page-title">&#128101; Delegate Add Rights</div>
-          <button class="btn btn-primary btn-sm" onclick="openAdminDelegateForm()">+ Grant Delegation</button>
-        </div>
-
-        <div class="card" style="background:#e8f4fd;border:1px solid #90cdf4;margin-bottom:16px">
-          <div style="font-size:13.5px;color:#1a365d;line-height:1.7">
-            <strong>&#9432; What this does:</strong> When both admins are away, grant a trusted supervisor
-            temporary permission to <strong>add new attachees</strong> and assign them to <em>any</em> supervisor —
-            the same capability an admin has. The delegation automatically expires on the date you set.
-          </div>
-        </div>
-
-        <div id="adminDelegateFormArea"></div>
-
-        <div class="card" style="padding:0">
-          <div style="padding:14px 16px 8px;font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.5px">
-            Active &amp; Past Delegations
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th><th>Supervisor Granted</th><th>Granted By</th>
-                  <th>Reason</th><th>Expires</th><th>Status</th><th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="adminDelegateBody"></tbody>
-            </table>
-          </div>
-        </div>
       </div>
 
       <!-- ── EMAIL CONFIG ────────────────────────────────────────────────────── -->
@@ -1212,14 +1125,11 @@ async function startApp() {
   document.getElementById('navName').textContent     = currentUser.fullName;
   document.getElementById('navRole').textContent     = currentUser.role;
   document.getElementById('sbAvatar').textContent     = initials(currentUser.fullName);
-  const adminOn = currentUser.role === 'admin' || currentUser.role === 'stand_in_admin';
+  const adminOn = currentUser.role === 'admin';
   document.getElementById('ndi-users').style.display   = adminOn ? '' : 'none';
   document.getElementById('ndi-export').style.display  = adminOn ? '' : 'none';
   document.getElementById('adminLabel').style.display   = adminOn ? '' : 'none';
   document.getElementById('addSupBtn').style.display   = adminOn ? '' : 'none';
-  document.getElementById('ndi-approvals').style.display = (currentUser.role !== 'viewer') ? '' : 'none';
-  document.getElementById('addStandInSupBtn').style.display = (currentUser.role === 'supervisor') ? '' : 'none';
-  document.getElementById('addStandInAdminBtn').style.display = (currentUser.role === 'admin' && currentUser.id === 1) ? '' : 'none';
   await loadAllData();
   showPage('dashboard');
   if (currentUser.mustChangePassword) {
@@ -1239,26 +1149,9 @@ async function loadAllData() {
   DB.institutions = insts;
   DB.supervisors  = sups;
   DB.attachees    = attachees;
-  
-  if (currentUser.role === 'admin' || currentUser.role === 'stand_in_admin') {
+  if (currentUser.role === 'admin') {
     DB.users = await apiFetch('/api/users');
   }
-  
-  if (currentUser.role !== 'viewer') {
-    try {
-      const approvals = await apiFetch('/api/approvals');
-      DB.approvals = approvals;
-      const pendingCount = approvals.filter(a => a.status === 'pending').length;
-      const appBadge = document.getElementById('approvalsBadge');
-      if (appBadge) {
-        appBadge.textContent = pendingCount;
-        appBadge.style.display = pendingCount > 0 ? '' : 'none';
-      }
-    } catch (e) {
-      console.error("Failed to load approvals badge", e);
-    }
-  }
-
   const badge = document.getElementById('attacheeCountBadge');
   if (badge) {
     badge.textContent = DB.attachees.length;
@@ -1322,9 +1215,7 @@ async function showPage(page) {
   else if (page === 'add-attachee') renderAttacheeForm(null);
   else if (page === 'add-supervisor') renderSupForm();
   else if (page === 'add-user')     renderUserForm();
-  else if (page === 'email-config')     loadEmailConfig();
-  else if (page === 'admin-delegates')  { await loadAdminDelegates(); }
-  else if (page === 'approvals')        { await loadApprovals(); }
+  else if (page === 'email-config') loadEmailConfig();
 }
 
 // ─── FLASH / HELPERS ─────────────────────────────────────────────────────────
@@ -1359,7 +1250,7 @@ function avColors(name) {
   return p[(name || '?').charCodeAt(0) % 5];
 }
 function initials(name) { return (name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase(); }
-function canEdit()  { return currentUser && (currentUser.role === 'admin' || currentUser.role === 'supervisor' || currentUser.role === 'stand_in_supervisor' || currentUser.role === 'stand_in_admin'); }
+function canEdit()  { return currentUser && (currentUser.role === 'admin' || currentUser.role === 'supervisor'); }
 function isAdmin()  { return currentUser && currentUser.role === 'admin'; }
 function todayStr() { return new Date().toISOString().split('T')[0]; }
 function fileSizeStr(bytes) {
@@ -2188,7 +2079,7 @@ async function deleteDept(id) {
 function renderUsers() {
   document.getElementById('userBody').innerHTML = DB.users.map((u, i) => `<tr>
     <td>${i + 1}</td><td><strong>${u.username}</strong></td><td>${u.full_name || u.fullName}</td><td>${u.email || '—'}</td>
-    <td><span class="badge ${u.role === 'admin' ? 'badge-red' : (u.role === 'supervisor' || u.role === 'stand_in_supervisor') ? 'badge-blue' : (u.role === 'stand_in_admin' ? 'badge-amber' : 'badge-gray')}">${u.role.replace('stand_in_','Stand-in ')}</span></td>
+    <td><span class="badge ${u.role === 'admin' ? 'badge-red' : u.role === 'supervisor' ? 'badge-blue' : 'badge-gray'}">${u.role}</span></td>
     <td>${u.id !== currentUser.id
       ? `<button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id})">Del</button>`
       : '<span style="color:var(--gray);font-size:11px">(you)</span>'
@@ -2460,417 +2351,6 @@ async function doChangePassword() {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && forcedPasswordChange) e.stopImmediatePropagation();
 }, true);
-
-// ─── APPROVALS SYSTEM ─────────────────────────────────────────────────────────
-let currentApprovalsTab = 'pending';
-
-function setApprovalsTab(tab) {
-  currentApprovalsTab = tab;
-  document.getElementById('approvals-pending-sec').style.display = tab === 'pending' ? 'block' : 'none';
-  document.getElementById('approvals-resolved-sec').style.display = tab === 'resolved' ? 'block' : 'none';
-  
-  const pendingBtn = document.getElementById('btn-pending-approvals');
-  const resolvedBtn = document.getElementById('btn-resolved-approvals');
-  
-  if (tab === 'pending') {
-    pendingBtn.className = 'btn btn-sm btn-primary';
-    resolvedBtn.className = 'btn btn-sm btn-outline';
-  } else {
-    pendingBtn.className = 'btn btn-sm btn-outline';
-    resolvedBtn.className = 'btn btn-sm btn-primary';
-  }
-}
-
-async function loadApprovals() {
-  try {
-    const approvals = await apiFetch('/api/approvals');
-    DB.approvals = approvals;
-    renderApprovals();
-  } catch (e) {
-    showFlash(e.message, 'danger');
-  }
-}
-
-function describeApproval(ap) {
-  const p = ap.parsed_payload || {};
-  if (ap.target_table === 'users') {
-    if (ap.action_type === 'CREATE') {
-      const roleLabel = p.role === 'stand_in_admin' ? 'Stand-in Admin'
-                       : p.role === 'stand_in_supervisor' ? 'Stand-in Supervisor'
-                       : p.role;
-      return `Create User: <strong>${p.username}</strong> (${roleLabel})`;
-    }
-    if (ap.action_type === 'DELETE') return `Delete User (ID: ${ap.target_id})`;
-  }
-  if (ap.target_table === 'attachees') {
-    if (ap.action_type === 'CREATE') return `Create Attachee: <strong>${p.first_name} ${p.last_name}</strong>`;
-    if (ap.action_type === 'UPDATE') return `Update Attachee: <strong>${p.first_name} ${p.last_name}</strong>`;
-    if (ap.action_type === 'DELETE') {
-      const a = DB.attachees.find(x => x.id === ap.target_id);
-      return `Delete Attachee: <strong>${a ? fullName(a) : 'ID ' + ap.target_id}</strong>`;
-    }
-  }
-  if (ap.target_table === 'evaluations') {
-    const a = DB.attachees.find(x => x.id === (p.attachee_id || ap.target_id));
-    const attName = a ? fullName(a) : 'Attachee';
-    if (ap.action_type === 'CREATE') return `Add Evaluation for <strong>${attName}</strong> (Score: ${p.score})`;
-    if (ap.action_type === 'UPDATE') return `Update Evaluation for <strong>${attName}</strong>`;
-    if (ap.action_type === 'DELETE') return `Delete Evaluation for <strong>${attName}</strong>`;
-  }
-  if (ap.target_table === 'documents') {
-    const a = DB.attachees.find(x => x.id === p.attachee_id);
-    const attName = a ? fullName(a) : 'Attachee';
-    if (ap.action_type === 'CREATE') return `Add Document (<em>${p.doc_type}</em>) for <strong>${attName}</strong>`;
-  }
-  if (ap.target_table === 'departments') {
-    if (ap.action_type === 'CREATE') return `Add Department: <strong>${p.name}</strong>`;
-    if (ap.action_type === 'UPDATE') return `Update Department: <strong>${p.name}</strong>`;
-    if (ap.action_type === 'DELETE') return `Delete Department (ID: ${ap.target_id})`;
-  }
-  if (ap.target_table === 'institutions') {
-    if (ap.action_type === 'CREATE') return `Add Institution: <strong>${p.name}</strong>`;
-    if (ap.action_type === 'UPDATE') return `Update Institution: <strong>${p.name}</strong>`;
-    if (ap.action_type === 'DELETE') return `Delete Institution (ID: ${ap.target_id})`;
-  }
-  if (ap.target_table === 'supervisors') {
-    if (ap.action_type === 'CREATE') return `Add Supervisor: <strong>${p.name}</strong>`;
-    if (ap.action_type === 'DELETE') return `Delete Supervisor (ID: ${ap.target_id})`;
-  }
-  return `${ap.action_type} ${ap.target_table}`;
-}
-
-function formatApprovalPayload(ap) {
-  const p = ap.parsed_payload || {};
-  let html = '<div style="font-size:11px;color:#475569;line-height:1.4">';
-  
-  const entries = Object.entries(p);
-  const excludeKeys = ['password_hash', 'password', 'must_change_password'];
-  
-  const items = entries
-    .filter(([k]) => !excludeKeys.includes(k) && p[k] !== null && p[k] !== '')
-    .map(([k, v]) => {
-      const label = k.replace(/_/g, ' ');
-      return `• <strong>${label}</strong>: ${v}`;
-    });
-    
-  if (items.length === 0) return '—';
-  
-  return html + items.join('<br>') + '</div>';
-}
-
-function renderApprovals() {
-  const pendingList = DB.approvals.filter(a => a.status === 'pending');
-  const resolvedList = DB.approvals.filter(a => a.status !== 'pending');
-  
-  const canResolve = (currentUser.role === 'admin' && currentUser.id === 1) || (currentUser.role === 'supervisor');
-  
-  // Render Pending
-  document.getElementById('approvalsPendingBody').innerHTML = pendingList.map((ap, idx) => {
-    const dateStr = new Date(ap.created_at).toLocaleString('en-KE');
-    const desc = describeApproval(ap);
-    const details = formatApprovalPayload(ap);
-    
-    let actionButtons = '';
-    if (canResolve) {
-      actionButtons = `
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-success btn-sm" onclick="doResolveApproval(${ap.id}, 'approved')">&#10003; Approve</button>
-          <button class="btn btn-danger btn-sm" onclick="promptRejectApproval(${ap.id})">&#215; Reject</button>
-        </div>
-      `;
-    } else {
-      actionButtons = `<span class="badge badge-amber">Awaiting Approval</span>`;
-    }
-    
-    return `
-      <tr>
-        <td>${idx + 1}</td>
-        <td style="font-size:12px">${dateStr}</td>
-        <td><strong>${ap.creator_name}</strong><br><small style="color:var(--gray)">${ap.creator_role}</small></td>
-        <td><span class="badge badge-blue">${ap.action_type}</span></td>
-        <td>${desc}</td>
-        <td>${details}</td>
-        <td>${actionButtons}</td>
-      </tr>
-    `;
-  }).join('') || '<tr><td colspan="7" class="empty">No pending approval requests.</td></tr>';
-
-  // Render Resolved
-  document.getElementById('approvalsResolvedBody').innerHTML = resolvedList.map((ap, idx) => {
-    const dateStr = new Date(ap.created_at).toLocaleString('en-KE');
-    const desc = describeApproval(ap);
-    const details = formatApprovalPayload(ap);
-    
-    const statusClass = ap.status === 'approved' ? 'badge-green' : 'badge-red';
-    const statusText = ap.status === 'approved' ? 'Approved' : 'Rejected';
-    
-    const resolvedDate = ap.resolved_at ? new Date(ap.resolved_at).toLocaleString('en-KE') : '';
-    
-    return `
-      <tr>
-        <td>${idx + 1}</td>
-        <td style="font-size:12px">${dateStr}</td>
-        <td><strong>${ap.creator_name}</strong><br><small style="color:var(--gray)">${ap.creator_role}</small></td>
-        <td><span class="badge badge-gray">${ap.action_type}</span></td>
-        <td>${desc}</td>
-        <td>${details}</td>
-        <td><span class="badge ${statusClass}">${statusText}</span></td>
-        <td style="font-size:11px">Resolved by User ID ${ap.resolved_by || '—'}<br>${resolvedDate}</td>
-        <td style="font-size:12px;color:var(--red)">${ap.rejection_reason || '—'}</td>
-      </tr>
-    `;
-  }).join('') || '<tr><td colspan="9" class="empty">No past resolved requests.</td></tr>';
-  
-  // Update badge
-  const pendingCount = pendingList.length;
-  const appBadge = document.getElementById('approvalsBadge');
-  if (appBadge) {
-    appBadge.textContent = pendingCount;
-    appBadge.style.display = pendingCount > 0 ? '' : 'none';
-  }
-}
-
-async function doResolveApproval(id, status, rejectionReason = '') {
-  try {
-    await apiFetch(`/api/approvals/${id}/resolve`, {
-      method: 'POST',
-      body: { status, rejectionReason }
-    });
-    showFlash(`Request has been ${status}.`);
-    await loadApprovals();
-  } catch (e) {
-    showFlash(e.message, 'danger');
-  }
-}
-
-function promptRejectApproval(id) {
-  const reason = prompt("Please enter the reason for rejection:");
-  if (reason === null) return;
-  doResolveApproval(id, 'rejected', reason.trim());
-}
-
-function openAddStandInSupModal() {
-  document.getElementById('modalContent').innerHTML = `
-    <div class="modal-title">&#128100; Add Stand-in Supervisor <button class="modal-close" onclick="closeModal()">&#215;</button></div>
-    <p style="font-size:13px;color:var(--gray);margin-bottom:14px">
-      Create a stand-in user who can assist you with your tasks. Their actions (like adding evaluations/attachees) will require your approval before being saved.
-    </p>
-    <div class="form-group" style="margin-bottom:12px">
-      <label>Username <span class="req">*</span></label>
-      <input type="text" id="sis_un" placeholder="Username (e.g. jdoe_assistant)" style="width:100%;margin-top:4px">
-    </div>
-    <div class="form-group" style="margin-bottom:12px">
-      <label>Full Name <span class="req">*</span></label>
-      <input type="text" id="sis_fn" placeholder="Full Name" style="width:100%;margin-top:4px">
-    </div>
-    <div class="form-group" style="margin-bottom:12px">
-      <label>Email</label>
-      <input type="email" id="sis_em" placeholder="Email Address" style="width:100%;margin-top:4px">
-    </div>
-    <div class="form-group" style="margin-bottom:16px">
-      <label>Password <span class="req">*</span></label>
-      <input type="password" id="sis_pw" placeholder="At least 6 characters" style="width:100%;margin-top:4px">
-    </div>
-    <div id="sis_flash"></div>
-    <div class="btn-group">
-      <button class="btn btn-warning" onclick="doSaveStandInSup()">Add Stand-in Supervisor</button>
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    </div>`;
-  openModal();
-}
-
-async function doSaveStandInSup() {
-  const u = document.getElementById('sis_un').value.trim();
-  const n = document.getElementById('sis_fn').value.trim();
-  const em = document.getElementById('sis_em').value.trim();
-  const p = document.getElementById('sis_pw').value;
-  const flash = document.getElementById('sis_flash');
-  
-  if (!u || !n || !p) {
-    flash.innerHTML = mkFlash('Username, name and password are required.', 'danger');
-    return;
-  }
-  
-  try {
-    const res = await apiFetch('/api/users', {
-      method: 'POST',
-      body: {
-        username: u,
-        fullName: n,
-        email: em,
-        password: p,
-        role: 'stand_in_supervisor'
-      }
-    });
-    closeModal();
-    showFlash(`Stand-in supervisor ${u} added successfully.`);
-  } catch (e) {
-    flash.innerHTML = mkFlash(e.message, 'danger');
-  }
-}
-
-function openAddStandInAdminModal() {
-  document.getElementById('modalContent').innerHTML = `
-    <div class="modal-title">&#128100; Add Stand-in Admin <button class="modal-close" onclick="closeModal()">&#215;</button></div>
-    <p style="font-size:13px;color:var(--gray);margin-bottom:14px">
-      Create a stand-in admin who can assist you with your tasks. Their actions will require your approval before being saved.
-    </p>
-    <div class="form-group" style="margin-bottom:12px">
-      <label>Username <span class="req">*</span></label>
-      <input type="text" id="sia_un" placeholder="Username (e.g. admin_assistant)" style="width:100%;margin-top:4px">
-    </div>
-    <div class="form-group" style="margin-bottom:12px">
-      <label>Full Name <span class="req">*</span></label>
-      <input type="text" id="sia_fn" placeholder="Full Name" style="width:100%;margin-top:4px">
-    </div>
-    <div class="form-group" style="margin-bottom:12px">
-      <label>Email</label>
-      <input type="email" id="sia_em" placeholder="Email Address" style="width:100%;margin-top:4px">
-    </div>
-    <div class="form-group" style="margin-bottom:16px">
-      <label>Password <span class="req">*</span></label>
-      <input type="password" id="sia_pw" placeholder="At least 6 characters" style="width:100%;margin-top:4px">
-    </div>
-    <div id="sia_flash"></div>
-    <div class="btn-group">
-      <button class="btn btn-warning" onclick="doSaveStandInAdmin()">Add Stand-in Admin</button>
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    </div>`;
-  openModal();
-}
-
-async function doSaveStandInAdmin() {
-  const u = document.getElementById('sia_un').value.trim();
-  const n = document.getElementById('sia_fn').value.trim();
-  const em = document.getElementById('sia_em').value.trim();
-  const p = document.getElementById('sia_pw').value;
-  const flash = document.getElementById('sia_flash');
-
-  if (!u || !n || !p) {
-    flash.innerHTML = mkFlash('Username, name and password are required.', 'danger');
-    return;
-  }
-
-  try {
-    await apiFetch('/api/users', {
-      method: 'POST',
-      body: {
-        username: u,
-        fullName: n,
-        email: em,
-        password: p,
-        role: 'stand_in_admin'
-      }
-    });
-    closeModal();
-    showFlash(`Stand-in admin ${u} added successfully.`);
-  } catch (e) {
-    flash.innerHTML = mkFlash(e.message, 'danger');
-  }
-}
-
-// ─── ADMIN DELEGATION ─────────────────────────────────────────────────────────
-let DB_adminDelegates = [];
-
-async function loadAdminDelegates() {
-  try {
-    DB_adminDelegates = await apiFetch('/api/admin-delegates');
-    renderAdminDelegates();
-  } catch(e) { showFlash(e.message, 'danger'); }
-}
-
-function renderAdminDelegates() {
-  const today = new Date().toISOString();
-  document.getElementById('adminDelegateBody').innerHTML = DB_adminDelegates.map((d, i) => {
-    const expired = d.expires_at && d.expires_at < today;
-    const active  = d.is_active && !expired;
-    const badge   = active
-      ? '<span class="badge badge-green">Active</span>'
-      : expired
-        ? '<span class="badge badge-amber">Expired</span>'
-        : '<span class="badge badge-gray">Revoked</span>';
-    const exp = d.expires_at ? d.expires_at.slice(0,10) : '—';
-    return `<tr>
-      <td>${i+1}</td>
-      <td><strong>${d.supervisor_name}</strong></td>
-      <td>${d.admin_name || '—'}</td>
-      <td style="font-size:12px;color:var(--gray)">${d.reason || '—'}</td>
-      <td style="font-size:12px">${exp}</td>
-      <td>${badge}</td>
-      <td>${active
-        ? `<button class="btn btn-danger btn-sm" onclick="revokeAdminDelegate(${d.id})">Revoke</button>`
-        : '—'}</td>
-    </tr>`;
-  }).join('') || '<tr><td colspan="7" class="empty">No delegations yet</td></tr>';
-}
-
-function openAdminDelegateForm() {
-  const supOpts = DB.supervisors.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-  const defExp  = new Date(Date.now() + 7*86400000).toISOString().slice(0,10);  // 7 days default
-  document.getElementById('adminDelegateFormArea').innerHTML = `
-    <div class="card" style="border-left:4px solid var(--amber);margin-bottom:16px">
-      <div class="card-title">&#43; Grant Temporary Add Rights</div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Supervisor to Grant Rights To <span class="req">*</span></label>
-          <select id="adel_sup">
-            <option value="">— Choose supervisor —</option>${supOpts}
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Expires On <span class="req">*</span></label>
-          <input type="date" id="adel_exp" value="${defExp}">
-        </div>
-        <div class="form-group" style="grid-column:1/-1">
-          <label>Reason <span class="req">*</span></label>
-          <input id="adel_reason" placeholder="e.g. Admin on annual leave 14–21 July, Sharon to handle new intakes">
-        </div>
-      </div>
-      <div style="margin-top:10px;padding:10px 14px;background:#fff3cd;border-radius:6px;font-size:12.5px;color:#856404;line-height:1.6">
-        &#9888; <strong>Important:</strong> The selected supervisor will be able to add attachees and assign them
-        to <em>any</em> supervisor — the same as admin. Only grant this to a trusted supervisor for a short period.
-        Any previous active delegation for this supervisor will be automatically replaced.
-      </div>
-      <div class="btn-group" style="margin-top:14px">
-        <button class="btn btn-warning" onclick="saveAdminDelegate()">&#128274; Grant Add Rights</button>
-        <button class="btn btn-ghost" onclick="document.getElementById('adminDelegateFormArea').innerHTML=''">Cancel</button>
-      </div>
-    </div>`;
-  document.getElementById('adminDelegateFormArea').scrollIntoView({ behavior:'smooth' });
-}
-
-async function saveAdminDelegate() {
-  const supId  = parseInt(document.getElementById('adel_sup').value);
-  const exp    = document.getElementById('adel_exp').value;
-  const reason = document.getElementById('adel_reason').value.trim();
-  if (!supId)  { showFlash('Please select a supervisor.', 'danger'); return; }
-  if (!exp)    { showFlash('Please set an expiry date.', 'danger'); return; }
-  if (!reason) { showFlash('Please provide a reason.', 'danger'); return; }
-  const expiresAt = exp + 'T23:59:59';
-  try {
-    const result = await apiFetch('/api/admin-delegates', { method:'POST', body:{
-      supervisorId: supId, reason, expiresAt
-    }});
-    DB_adminDelegates.unshift(result);
-    renderAdminDelegates();
-    document.getElementById('adminDelegateFormArea').innerHTML = '';
-    const supName = DB.supervisors.find(s=>s.id===supId)?.name || 'Supervisor';
-    showFlash(`&#128274; Add rights granted to ${supName} until ${exp}. They can now add attachees as admin.`, 'success');
-    // Update badge
-    const badge = document.getElementById('adminDelBadge');
-    if (badge) { badge.style.display=''; badge.textContent='!'; }
-  } catch(e) { showFlash(e.message, 'danger'); }
-}
-
-async function revokeAdminDelegate(id) {
-  const d = DB_adminDelegates.find(x => x.id===id);
-  if (!confirm(`Revoke add rights from ${d?.supervisor_name}? They will immediately lose ability to add attachees.`)) return;
-  try {
-    await apiFetch(`/api/admin-delegates/${id}`, { method:'DELETE' });
-    await loadAdminDelegates();
-    showFlash('Add rights revoked successfully.', 'warning');
-  } catch(e) { showFlash(e.message, 'danger'); }
-}
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
 tryAutoLogin();
